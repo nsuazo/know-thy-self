@@ -30,6 +30,13 @@ class Settings:
     llm_timeout: int = field(default_factory=lambda: _env_int("LLM_TIMEOUT", 600))
     llm_max_tokens: int = field(default_factory=lambda: _env_int("LLM_MAX_TOKENS", 16384))
     context_budget_tokens: int = field(default_factory=lambda: _env_int("CONTEXT_BUDGET_TOKENS", 90000))
+    # Thinking is on by default on the server. Set false to send enable_thinking=false per request
+    # (verify with scripts/test_llm.py first).
+    llm_enable_thinking: bool = field(
+        default_factory=lambda: _env("LLM_ENABLE_THINKING", "true").strip().lower() in ("1", "true", "yes", "on")
+    )
+    # Entries from at least this many recent days are always included verbatim.
+    context_min_days: int = field(default_factory=lambda: _env_int("CONTEXT_MIN_DAYS", 14))
 
     @property
     def db_path(self) -> Path:

@@ -41,9 +41,26 @@ in Unraid's Docker tab.
 | `TZ` | `America/Chicago` | Logical day and export schedule |
 | `DAY_CUTOFF_HOUR` | `4` | Writing before this hour counts as the previous day |
 | `EXPORT_HOUR` | `3` | Nightly Markdown export hour; `-1` disables |
-| `LLM_BASE_URL` | `http://192.168.1.80:8090/v1` | OpenAI-compatible endpoint (Phase 2+) |
-| `LLM_MODEL` | `gemma-official` | Model name (Phase 2+) |
+| `LLM_BASE_URL` | `http://192.168.1.80:8090/v1` | OpenAI-compatible endpoint |
+| `LLM_MODEL` | `gemma-official` | Model name sent with each request |
+| `LLM_TIMEOUT` | `600` | Seconds to wait for an answer (one retry on timeout) |
+| `LLM_MAX_TOKENS` | `16384` | Output limit; thinking counts against it |
+| `LLM_ENABLE_THINKING` | `true` | `false` sends `enable_thinking=false` (test it first) |
+| `CONTEXT_BUDGET_TOKENS` | `90000` | Prompt size budget; oldest entries are dropped first |
+| `CONTEXT_MIN_DAYS` | `14` | Recent days always included as context |
 | `PUID` / `PGID` | `99` / `100` | Owner of `/data` (Unraid nobody:users) |
+
+## Testing the LLM connection
+
+Standard library only, so it runs anywhere with Python 3:
+
+```bash
+python3 scripts/test_llm.py
+```
+
+It lists the server's models, makes a chat request with the server's default thinking, and tries
+`enable_thinking=false`, then tells you whether that switch works. The first request after the
+model was idle can take 20-30 seconds while it loads.
 
 ## Data
 

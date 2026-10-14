@@ -12,7 +12,8 @@ from .config import settings
 from .db import connect, init_db
 from .days import now_local
 from .export import export_all
-from .routes import history, journal
+from . import jobs
+from .routes import history, journal, review
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("know-thy-self")
@@ -42,7 +43,12 @@ async def export_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    task = asyncio.create_task(export_loop()) if 0 <= settings.export_hour <= 23 else None
+    conn = connect()
+    try:
+        jobs.fail_stale_jobs(conn)
+    finally:
+        conn.close()
+    task =asyncio.create_task(export_loop()) if 0 <= settings.export_hour <= 23 else None
     log.info("Know Thy Self started; data dir %s", settings.data_dir)
     yield
     if task:
@@ -53,3 +59,4 @@ app = FastAPI(title="Know Thy Self", lifespan=lifespan, docs_url=None, redoc_url
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 app.include_router(journal.router)
 app.include_router(history.router)
+app.include_router(review.router)

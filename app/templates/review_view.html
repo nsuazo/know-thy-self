@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Review · Know Thy Self{% endblock %}
+{% block content %}
+<div class="review-page">
+  <div class="review-head">
+    <a class="muted small" href="/review">&larr; All reviews</a>
+    <h1 class="page-title">Review: {{ scope_label }}</h1>
+    <p class="muted small">
+      {{ r.created_at[:10] | long_date }}
+      {% if r.range_start %} · entries {{ r.range_start }}{% if r.range_end != r.range_start %} → {{ r.range_end }}{% endif %}{% endif %}
+      · {{ r.entries_included }} entr{{ 'y' if r.entries_included == 1 else 'ies' }} read
+      {% if r.entries_omitted %}({{ r.entries_omitted }} older omitted for length){% endif %}
+    </p>
+    <p class="muted small">
+      {{ names | join(', ') }}
+      {% if r.seconds %} · {{ r.seconds | round | int }}s{% endif %}
+      {% if r.completion_tokens %} · {{ r.completion_tokens }} tokens out{% endif %}
+      {% if r.model %} · {{ r.model }}{% endif %}
+    </p>
+  </div>
+
+  <article class="card review-body">
+    {{ r.content | review_md }}
+  </article>
+
+  <p><a class="btn" href="/review">Run another review</a></p>
+</div>
+{% endblock %}

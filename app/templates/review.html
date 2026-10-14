@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Review · Know Thy Self{% endblock %}
+{% block content %}
+<div class="review-page">
+  <h1 class="page-title">Review</h1>
+  <p class="muted">A panel of perspectives reads your journal and tells you what it sees. It cites the entries it relies on, and it is meant to be blunt.</p>
+
+  <form id="review-form" class="card" data-active-job="{{ active_job or '' }}">
+    <fieldset>
+      <legend>Scope</legend>
+      <div class="choices">
+        {% for key, label in scopes %}
+        <label class="choice"><input type="radio" name="scope" value="{{ key }}" {{ 'checked' if key == '7d' }}> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Perspectives
+        <button type="button" class="link-btn" id="persp-all">all</button>
+        <button type="button" class="link-btn" id="persp-none">none</button>
+      </legend>
+      <div class="choices persp">
+        {% for p in perspectives %}
+        <label class="choice"><input type="checkbox" name="perspective" value="{{ p.key }}" checked> {{ p.name }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="run-row">
+      <button type="submit" id="run-btn" class="btn btn-primary">Run review</button>
+      <span id="review-progress" class="progress" hidden>
+        <span class="spinner"></span>
+        <span id="progress-text">Working…</span>
+        <span id="progress-time" class="muted">0:00</span>
+      </span>
+    </div>
+    <p class="muted small" id="progress-hint" hidden>If the model has to load first, this can take a minute or two.</p>
+
+    <div id="review-error" class="error-box" hidden>
+      <p id="review-error-text"></p>
+      <button type="button" id="review-retry" class="btn">Retry</button>
+    </div>
+  </form>
+
+  <h2 class="section-title">Past reviews</h2>
+  <ul class="entry-list">
+    {% for r in past %}
+    <li class="card entry-row">
+      <div class="entry-row-head">
+        <a class="entry-date" href="/review/{{ r.id }}">{{ r.created_at[:10] | short_date }}</a>
+        <span class="muted small">
+          {{ r.scope }}{% if r.start and r.start != r.end %} · {{ r.start }} → {{ r.end }}{% endif %}
+          · {{ r.count }} perspective{{ '' if r.count == 1 else 's' }}
+          {% if r.seconds %}· {{ r.seconds | round | int }}s{% endif %}
+        </span>
+      </div>
+    </li>
+    {% else %}
+    <li class="empty">No reviews yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+/* Review pages and the LLM status badge. */
+.page-title { font-family: var(--serif); font-weight: 500; font-size: 1.7rem; margin: 0 0 0.4rem; }
+.section-title { font-size: 1rem; font-weight: 600; margin: 2rem 0 0.8rem; }
+
+.topbar .llm-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 0.45rem;
+  font-size: 0.8rem; color: var(--muted); }
+.llm-badge .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--muted); display: inline-block; }
+.llm-badge.on .dot { background: var(--ok); }
+.llm-badge.off .dot { background: var(--err); }
+
+.review-page fieldset { border: none; padding: 0; margin: 0 0 1.1rem; }
+.review-page legend { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.5rem; padding: 0; }
+.choices { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; }
+.choice { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.choice input { accent-color: var(--accent); }
+
+.btn-primary { background: var(--accent-dim); border-color: var(--accent); }
+.run-row { display: flex; align-items: center; gap: 1.2rem; }
+.progress { display: inline-flex; align-items: center; gap: 0.6rem; }
+.spinner { width: 1rem; height: 1rem; border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-box { margin-top: 1rem; padding: 0.8rem 1rem; border: 1px solid var(--err); border-radius: 8px; background: #2a1a1d; }
+.error-box p { margin: 0 0 0.6rem; }
+[hidden] { display: none !important; }
+
+/* Rendered review */
+.review-head { margin-bottom: 1rem; }
+.review-head p { margin: 0.2rem 0; }
+.review-body { font-family: var(--serif); font-size: 16px; line-height: 1.65; padding: 1.2rem 1.6rem; }
+.review-body h2 { font-family: var(--font); font-size: 1.05rem; margin: 1.8rem 0 0.6rem; padding-top: 1.2rem;
+  border-top: 1px solid var(--border); color: var(--accent); }
+.review-body h2:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.review-body p { margin: 0.5rem 0; }
+.review-body strong { color: var(--text); font-family: var(--font); font-size: 0.85rem; letter-spacing: 0.02em; }
+.review-body a { border-bottom: 1px dotted var(--accent); }
+.review-body a:hover { text-decoration: none; border-bottom-style: solid; }

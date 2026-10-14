@@ -5,18 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Know Thy Self{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/review.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/">Know Thy Self</a>
     <nav>
       <a href="/" class="{{ 'active' if nav == 'journal' }}">Journal</a>
+      <a href="/review" class="{{ 'active' if nav == 'review' }}">Review</a>
       <a href="/history" class="{{ 'active' if nav == 'history' }}">History</a>
     </nav>
+    <span id="llm-badge" class="llm-badge" title="Checking the LLM server…"><span class="dot"></span><span class="llm-label">LLM</span></span>
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
   <script src="/static/app.js"></script>
+  <script src="/static/llm.js"></script>
 </body>
 </html>
