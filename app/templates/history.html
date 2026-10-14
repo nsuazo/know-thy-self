@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}History · Know Thy Self{% endblock %}
+{% block content %}
+<div class="history">
+  <div class="history-head">
+    <h1>History</h1>
+    <button type="button" id="export-btn" class="btn">Export Markdown now</button>
+    <span id="export-status" class="muted small"></span>
+  </div>
+
+  <form class="search" method="get" action="/history">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search all entries…" autofocus>
+  </form>
+
+  {% if results is not none %}
+    <p class="muted small">{{ results | length }} result{{ '' if results | length == 1 else 's' }} for “{{ q }}”</p>
+    <ul class="entry-list">
+      {% for r in results %}
+      <li class="card entry-row">
+        <a class="entry-date" href="/day/{{ r.day }}">{{ r.day | short_date }}</a>
+        <p class="snippet">{{ r.snip | highlight }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <ul class="entry-list">
+      {% for e in entries %}
+      <li class="card entry-row">
+        <div class="entry-row-head">
+          <a class="entry-date" href="/day/{{ e.day }}">{{ e.day | short_date }}</a>
+          <span class="muted small">
+            {% if e.mood %}mood {{ e.mood }}{% endif %}
+            {% if e.energy %} · energy {{ e.energy }}{% endif %}
+            · {{ e.words }} words
+          </span>
+          {% for t in e.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+        </div>
+        {% if e.snippet %}<p class="snippet">{{ e.snippet }}</p>{% endif %}
+      </li>
+      {% else %}
+      <li class="empty">No entries yet. <a href="/">Write today's.</a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endblock %}

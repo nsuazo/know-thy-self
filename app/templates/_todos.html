@@ -1,0 +1,18 @@
+<ul class="todo-list">
+  {% for t in todos %}
+  <li class="todo {{ 'done' if t.done }}">
+    <label>
+      <input type="checkbox" data-todo-toggle="{{ t.id }}" {{ 'checked' if t.done }}>
+      <span class="todo-text">{{ t.text }}</span>
+    </label>
+    {% if t.carried_days > 0 %}
+    <span class="badge {{ 'badge-warn' if t.carried_days >= 3 }}" title="First added {{ t.created_day }}">carried {{ t.carried_days }}d</span>
+    {% endif %}
+    {% if not t.done %}
+    <button type="button" class="link-btn" data-todo-drop="{{ t.id }}" title="Drop this item">drop</button>
+    {% endif %}
+  </li>
+  {% else %}
+  <li class="empty">Nothing on the list.</li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ day | short_date }} · Know Thy Self{% endblock %}
+{% block content %}
+<div class="day" data-day="{{ day }}">
+
+  <div class="day-head">
+    <a class="nav-arrow" href="/day/{{ prev_day }}" title="Previous day">&larr;</a>
+    <div class="day-title">
+      <h1>{{ day | long_date }}</h1>
+      {% if not is_today %}<a class="muted small" href="/day/{{ today }}">Back to today</a>{% endif %}
+    </div>
+    {% if next_day %}
+    <a class="nav-arrow" href="/day/{{ next_day }}" title="Next day">&rarr;</a>
+    {% else %}
+    <span class="nav-arrow disabled">&rarr;</span>
+    {% endif %}
+    <span id="save-status" class="save-status" aria-live="polite"></span>
+  </div>
+
+  <section class="meta card">
+    {% for field, label in [('mood', 'Mood'), ('energy', 'Energy')] %}
+    <div class="meta-row">
+      <span class="meta-label">{{ label }}</span>
+      <div class="scale" data-meta="{{ field }}" data-value="{{ entry[field] if entry and entry[field] else '' }}">
+        {% for n in range(1, 6) %}
+        <button type="button" data-n="{{ n }}" class="{{ 'on' if entry and entry[field] == n }}">{{ n }}</button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    <div class="meta-row">
+      <label class="meta-label" for="tags">Tags</label>
+      <input id="tags" class="tags-input" type="text" list="tag-options"
+             placeholder="comma separated" value="{{ tags | join(', ') }}">
+      <datalist id="tag-options">
+        {% for t in all_tags %}<option value="{{ t }}">{% endfor %}
+      </datalist>
+    </div>
+  </section>
+
+  {% for s in sections %}
+  <section class="card section" id="s-{{ s.key }}">
+    <h2>{{ s.label }}</h2>
+
+    {% if s.kind == 'todos' %}
+      <div id="todos">{% include "_todos.html" %}</div>
+      <form id="todo-add" class="todo-add" autocomplete="off">
+        <input type="text" name="text" placeholder="Add a todo and press Enter" maxlength="500">
+      </form>
+
+    {% elif s.kind == 'yesterday' %}
+      {% if yesterday %}
+      <ul class="yesterday">
+        {% for y in yesterday %}
+        <li class="y-{{ y.status }}">
+          <span class="y-mark">{% if y.status == 'done' %}&#10003;{% elif y.status == 'dropped' %}&ndash;{% else %}&#10007;{% endif %}</span>
+          {{ y.text }}
+          <span class="muted small">
+            {% if y.status == 'done_later' %}finished {{ y.completed_day }}{% elif y.status == 'dropped' %}dropped{% elif y.status == 'open' %}not done{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small">No todos were open yesterday.</p>
+      {% endif %}
+      <textarea data-section="{{ s.key }}" rows="2" placeholder="How did it go?">{{ contents.get(s.key, '') }}</textarea>
+
+    {% else %}
+      <textarea data-section="{{ s.key }}" rows="3">{{ contents.get(s.key, '') }}</textarea>
+    {% endif %}
+  </section>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>know-thy-self</Name>
+  <Repository>ghcr.io/CHANGEME/know-thy-self:latest</Repository>
+  <Registry>https://github.com/CHANGEME/know-thy-self/pkgs/container/know-thy-self</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/CHANGEME/know-thy-self</Project>
+  <Overview>Personal self-reflection journal with LLM review via a local OpenAI-compatible endpoint.</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:8480]/</WebUI>
+  <TemplateURL/>
+  <Icon/>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI port" Target="8480" Default="8480" Mode="tcp" Description="Port for the web UI" Type="Port" Display="always" Required="true" Mask="false">8480</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/know-thy-self" Mode="rw" Description="SQLite database and Markdown export" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/know-thy-self</Config>
+  <Config Name="LLM base URL" Target="LLM_BASE_URL" Default="http://192.168.1.80:8090/v1" Mode="" Description="OpenAI-compatible endpoint (Phase 2+)" Type="Variable" Display="always" Required="false" Mask="false">http://192.168.1.80:8090/v1</Config>
+  <Config Name="LLM model" Target="LLM_MODEL" Default="gemma-official" Mode="" Description="Model name sent to the endpoint" Type="Variable" Display="always" Required="false" Mask="false">gemma-official</Config>
+  <Config Name="Time zone" Target="TZ" Default="America/Chicago" Mode="" Description="Used for the logical day and nightly export" Type="Variable" Display="advanced" Required="false" Mask="false">America/Chicago</Config>
+  <Config Name="Day cutoff hour" Target="DAY_CUTOFF_HOUR" Default="4" Mode="" Description="Writing before this local hour counts as the previous day" Type="Variable" Display="advanced" Required="false" Mask="false">4</Config>
+  <Config Name="Export hour" Target="EXPORT_HOUR" Default="3" Mode="" Description="Local hour for the nightly Markdown export (-1 disables)" Type="Variable" Display="advanced" Required="false" Mask="false">3</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID that owns /data" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID that owns /data" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+</Container>
