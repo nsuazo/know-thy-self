@@ -256,3 +256,20 @@ def search(conn: sqlite3.Connection, q: str, limit: int = 200) -> list[dict]:
         (query, limit),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------- profile versions ----------
+
+def latest_profile(conn: sqlite3.Connection) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM profile_versions ORDER BY version DESC LIMIT 1").fetchone()
+
+
+def profile_by_id(conn: sqlite3.Connection, profile_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM profile_versions WHERE id = ?", (profile_id,)).fetchone()
+
+
+def profile_versions(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT id, version, covers_from, covers_through, entries_count, created_at "
+        "FROM profile_versions ORDER BY version DESC"
+    ).fetchall()

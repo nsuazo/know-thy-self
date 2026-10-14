@@ -1,7 +1,6 @@
-"""Review panel: page, start a job, poll a job, view a finished review, LLM status."""
+"""Review panel: the page, starting a review job, viewing a finished review."""
 import json
 import sqlite3
-import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -9,7 +8,6 @@ from pydantic import BaseModel, Field
 
 from .. import jobs
 from ..db import get_db
-from ..llm import client
 from ..llm.perspectives import BY_KEY, PERSPECTIVES
 from ..web import templates
 
@@ -18,21 +16,10 @@ router = APIRouter()
 SCOPES = [("today", "Today"), ("7d", "Last 7 days"), ("30d", "Last 30 days"), ("all", "Everything")]
 SCOPE_LABELS = dict(SCOPES)
 
-_status_cache: dict = {"at": 0.0, "ok": False, "detail": ""}
-
 
 class ReviewIn(BaseModel):
     scope: str
     perspectives: list[str] = Field(default_factory=list, max_length=20)
-
-
-@router.get("/api/llm/status")
-async def llm_status():
-    # Cached briefly so a page load on every tab doesn't hammer the LLM box.
-    if time.monotonic() - _status_cache["at"] > 10:
-        ok, detail = await client.check_reachable()
-        _status_cache.update(at=time.monotonic(), ok=ok, detail=detail)
-    return {"ok": _status_cache["ok"], "detail": _status_cache["detail"], "host": client.host()}
 
 
 @router.get("/review", response_class=HTMLResponse)
@@ -75,12 +62,7 @@ def review_view(request: Request, review_id: int, conn: sqlite3.Connection = Dep
     return templates.TemplateResponse(
         request,
         "review_view.html",
-        {
-            "nav": "review",
-            "r": row,
-            "scope_label": SCOPE_LABELS.get(row["scope"], row["scope"]),
-            "names": names,
-        },
+        {"nav": "review", "r": row, "scope_label": SCOPE_LABELS.get(row["scope"], row["scope"]), "names": names},
     )
 
 
@@ -92,20 +74,8 @@ async def start_review(body: ReviewIn, conn: sqlite3.Connection = Depends(get_db
     keys = [p.key for p in PERSPECTIVES if p.key in wanted]
     if not keys:
         raise HTTPException(status_code=400, detail="Pick at least one perspective.")
-    if jobs.active_job(conn):
-        raise HTTPException(status_code=409, detail="Another LLM job is already running. Wait for it to finish.")
-    ok, detail = await client.check_reachable()
-    _status_cache.update(at=time.monotonic(), ok=ok, detail=detail)
-    if not ok:
-        raise HTTPException(status_code=503, detail=client.unreachable_message(detail))
-    job_id = jobs.create_job(conn, "review", {"scope": body.scope, "perspectives": keys})
-    jobs.start(job_id)
+    try:
+        job_id = await jobs.submit(conn, "review", {"scope": body.scope, "perspectives": keys})
+    except jobs.JobRejected as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
     return {"job_id": job_id}
-
-
-@router.get("/api/jobs/{job_id}")
-def job_status(job_id: int, conn: sqlite3.Connection = Depends(get_db)):
-    job = jobs.get_job(conn, job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return {"status": job["status"], "error": job["error"], "result_id": job["result_id"], "kind": job["kind"]}

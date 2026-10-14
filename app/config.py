@@ -35,6 +35,11 @@ class Settings:
     llm_enable_thinking: bool = field(
         default_factory=lambda: _env("LLM_ENABLE_THINKING", "true").strip().lower() in ("1", "true", "yes", "on")
     )
+    # Weekly/monthly summaries are plain compression, so thinking is off by default. If the
+    # server ignores enable_thinking=false this is harmless. Set true to force thinking.
+    summary_thinking: bool = field(
+        default_factory=lambda: _env("LLM_SUMMARY_THINKING", "false").strip().lower() in ("1", "true", "yes", "on")
+    )
     # Entries from at least this many recent days are always included verbatim.
     context_min_days: int = field(default_factory=lambda: _env_int("CONTEXT_MIN_DAYS", 14))
 

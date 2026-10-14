@@ -1,0 +1,25 @@
+/* Profile, summaries and the shared job progress area. */
+.banner { margin: 1rem 0; padding: 0.7rem 1rem; border: 1px solid var(--accent); border-radius: 8px;
+  background: var(--accent-dim); }
+.action-card { margin-top: 1rem; }
+.action-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.8rem; }
+.action-card .small { margin: 0.6rem 0 0; }
+
+.job-ui { margin-top: 0.4rem; }
+.job-progress { display: inline-flex; align-items: center; gap: 0.6rem; }
+.job-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 0.6rem; overflow: hidden; }
+.job-bar-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.4s; }
+.job-hint { margin: 0.5rem 0 0; }
+button:disabled, input:disabled { opacity: 0.5; cursor: default; }
+
+.version-list { list-style: none; padding: 0; margin: 0; }
+.version-list li { padding: 0.35rem 0; display: flex; gap: 1rem; align-items: baseline; }
+.empty-card { text-align: center; color: var(--muted); }
+.empty-card p { margin: 0.4rem 0; }
+
+.summary-item { padding: 0.7rem 1.1rem; }
+.summary-item summary { cursor: pointer; list-style: none; display: flex; gap: 0.8rem; align-items: baseline; flex-wrap: wrap; }
+.summary-item summary::-webkit-details-marker { display: none; }
+.summary-item summary::before { content: "\25B8"; color: var(--muted); }
+.summary-item[open] summary::before { content: "\25BE"; }
+.summary-item .review-body { padding: 0.6rem 0 0.2rem; margin-top: 0.6rem; border-top: 1px solid var(--border); }

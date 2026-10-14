@@ -1,4 +1,4 @@
-// Know Thy Self — LLM status badge and the review page (start job, poll, redirect).
+// Know Thy Self — LLM status badge and background-job UI (start, poll, progress, redirect).
 (function () {
   "use strict";
 
@@ -20,91 +20,97 @@
   refreshBadge();
   setInterval(refreshBadge, 30000);
 
-  // ---------- review page ----------
-  const form = document.getElementById("review-form");
-  if (!form) return;
+  // ---------- background jobs ----------
+  const root = document.querySelector(".job-ui");
+  if (!root) return;
 
-  const runBtn = document.getElementById("run-btn");
-  const progress = document.getElementById("review-progress");
-  const progressText = document.getElementById("progress-text");
-  const progressTime = document.getElementById("progress-time");
-  const progressHint = document.getElementById("progress-hint");
-  const errorBox = document.getElementById("review-error");
-  const errorText = document.getElementById("review-error-text");
-  const retryBtn = document.getElementById("review-retry");
+  const $ = (sel) => root.querySelector(sel);
+  const progress = $(".job-progress");
+  const text = $(".job-text");
+  const clock = $(".job-time");
+  const bar = $(".job-bar");
+  const barFill = $(".job-bar-fill");
+  const hint = $(".job-hint");
+  const errorBox = $(".job-error");
+  const errorText = $(".job-error-text");
+  const retryBtn = $(".job-retry");
 
   let pollTimer = null;
   let clockTimer = null;
   let startedAt = 0;
+  let lastStart = null;
 
   function setBusy(busy) {
-    runBtn.disabled = busy;
     progress.hidden = !busy;
-    progressHint.hidden = !busy;
-    form.querySelectorAll("input").forEach((i) => (i.disabled = busy));
+    hint.hidden = !busy;
+    if (!busy) bar.hidden = true;
+    document.querySelectorAll("[data-job-lock]").forEach((el) => {
+      if (busy) {
+        el.dataset.wasDisabled = el.disabled ? "1" : "";
+        el.disabled = true;
+      } else {
+        el.disabled = el.dataset.wasDisabled === "1";
+      }
+    });
   }
 
-  function tickClock() {
+  function tick() {
     const s = Math.floor((Date.now() - startedAt) / 1000);
-    progressTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    clock.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   }
 
-  function stopTimers() {
+  function stop() {
     clearInterval(pollTimer);
     clearInterval(clockTimer);
   }
 
   function fail(message) {
-    stopTimers();
+    stop();
     setBusy(false);
     errorText.textContent = message;
-    errorBox.hidden = false;
+    errorBox.hidden = !message;
     refreshBadge();
   }
 
   function watch(jobId) {
     startedAt = Date.now();
+    errorBox.hidden = true;
     setBusy(true);
-    tickClock();
-    clockTimer = setInterval(tickClock, 1000);
+    tick();
+    clockTimer = setInterval(tick, 1000);
     pollTimer = setInterval(async () => {
       try {
         const res = await fetch(`/api/jobs/${jobId}`);
         if (!res.ok) throw new Error(res.status);
         const job = await res.json();
-        progressText.textContent = job.status === "queued" ? "Queued…" : "Thinking…";
+        text.textContent = job.progress_label || (job.status === "queued" ? "Queued…" : "Working…");
+        if (job.progress_total > 0) {
+          bar.hidden = false;
+          barFill.style.width = `${Math.round((100 * job.progress_done) / job.progress_total)}%`;
+        }
         if (job.status === "done") {
-          stopTimers();
-          window.location.href = `/review/${job.result_id}`;
+          stop();
+          window.location.assign(job.next);
         } else if (job.status === "error") {
-          fail(job.error || "The review failed.");
+          fail(job.error || "The job failed.");
         }
       } catch (_) {
-        // Transient poll failure (e.g. app restarting); keep trying.
+        // Transient poll failure (e.g. the app restarting); keep trying.
       }
     }, 2000);
   }
 
-  async function run() {
+  async function run(startFn) {
+    lastStart = startFn;
     errorBox.hidden = true;
-    const scope = form.elements.scope.value;
-    const perspectives = [...form.querySelectorAll("input[name=perspective]:checked")].map((i) => i.value);
-    if (perspectives.length === 0) {
-      fail("Pick at least one perspective.");
-      return;
-    }
-    runBtn.disabled = true;
     let res;
     try {
-      res = await fetch("/api/review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scope, perspectives }),
-      });
-    } catch (_) {
-      fail("Could not reach the journal server.");
+      res = await startFn();
+    } catch (err) {
+      fail(err && err.message ? err.message : "Could not reach the journal server.");
       return;
     }
+    if (!res) return;
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       fail(typeof data.detail === "string" ? data.detail : `Error ${res.status}`);
@@ -113,14 +119,38 @@
     watch(data.job_id);
   }
 
-  form.addEventListener("submit", (e) => { e.preventDefault(); run(); });
-  retryBtn.addEventListener("click", run);
-  document.getElementById("persp-all").addEventListener("click", () =>
-    form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = true)));
-  document.getElementById("persp-none").addEventListener("click", () =>
-    form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = false)));
+  function post(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+  }
+
+  // Review form
+  const form = document.getElementById("review-form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      run(async () => {
+        const scope = form.elements.scope.value;
+        const perspectives = [...form.querySelectorAll("input[name=perspective]:checked")].map((i) => i.value);
+        if (perspectives.length === 0) throw new Error("Pick at least one perspective.");
+        return post("/api/review", { scope, perspectives });
+      });
+    });
+    const setAll = (v) => form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = v));
+    document.getElementById("persp-all").addEventListener("click", () => setAll(true));
+    document.getElementById("persp-none").addEventListener("click", () => setAll(false));
+  }
+
+  // Buttons that start a job at a fixed endpoint (profile, summaries)
+  document.querySelectorAll("[data-job-endpoint]").forEach((btn) => {
+    btn.addEventListener("click", () => run(() => post(btn.dataset.jobEndpoint)));
+  });
+
+  retryBtn.addEventListener("click", () => lastStart && run(lastStart));
 
   // Resume watching if a job was already running when the page loaded.
-  const active = form.dataset.activeJob;
-  if (active) watch(Number(active));
+  if (root.dataset.activeJob) watch(Number(root.dataset.activeJob));
 })();

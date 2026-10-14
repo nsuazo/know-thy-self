@@ -7,8 +7,9 @@
     <h1 class="page-title">Review: {{ scope_label }}</h1>
     <p class="muted small">
       {{ r.created_at[:10] | long_date }}
-      {% if r.range_start %} · entries {{ r.range_start }}{% if r.range_end != r.range_start %} → {{ r.range_end }}{% endif %}{% endif %}
+      {% if r.range_start %} · {{ r.range_start }}{% if r.range_end != r.range_start %} → {{ r.range_end }}{% endif %}{% endif %}
       · {{ r.entries_included }} entr{{ 'y' if r.entries_included == 1 else 'ies' }} read
+      {% if r.summaries_used %}+ {{ r.summaries_used }} summar{{ 'y' if r.summaries_used == 1 else 'ies' }}{% endif %}
       {% if r.entries_omitted %}({{ r.entries_omitted }} older omitted for length){% endif %}
     </p>
     <p class="muted small">

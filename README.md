@@ -46,6 +46,7 @@ in Unraid's Docker tab.
 | `LLM_TIMEOUT` | `600` | Seconds to wait for an answer (one retry on timeout) |
 | `LLM_MAX_TOKENS` | `16384` | Output limit; thinking counts against it |
 | `LLM_ENABLE_THINKING` | `true` | `false` sends `enable_thinking=false` (test it first) |
+| `LLM_SUMMARY_THINKING` | `false` | Thinking for weekly/monthly summaries (the profile and reviews use `LLM_ENABLE_THINKING`) |
 | `CONTEXT_BUDGET_TOKENS` | `90000` | Prompt size budget; oldest entries are dropped first |
 | `CONTEXT_MIN_DAYS` | `14` | Recent days always included as context |
 | `PUID` / `PGID` | `99` / `100` | Owner of `/data` (Unraid nobody:users) |

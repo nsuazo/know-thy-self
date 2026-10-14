@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Summaries · Know Thy Self{% endblock %}
+{% block content %}
+<div class="review-page">
+  <a class="muted small" href="/profile">&larr; Profile</a>
+  <h1 class="page-title">Summaries</h1>
+  <p class="muted">Compact weekly and monthly summaries written by the model. Reviews and the profile read these instead of old entries, so they can look back over your whole history. Weeks are Monday to Sunday and only complete weeks are summarized. A summary is rebuilt if you edit an entry it was built from.</p>
+
+  <div class="card action-card">
+    <div class="action-row">
+      <button type="button" class="btn btn-primary" data-job-lock data-job-endpoint="/api/summaries/catch-up" {{ 'disabled' if not plan.total }}>
+        Catch up summaries{% if plan.total %} ({{ plan.total }}){% endif %}
+      </button>
+      <span class="muted small">
+        {% if plan.total %}{{ plan.missing_weeks }} week{{ '' if plan.missing_weeks == 1 else 's' }} missing,
+        {{ plan.stale_weeks }} outdated, {{ plan.months | length }} month{{ '' if plan.months | length == 1 else 's' }} to build
+        {% else %}Everything is up to date.{% endif %}
+      </span>
+    </div>
+    {% include "_job_ui.html" %}
+  </div>
+
+  {% if months %}
+  <h2 class="section-title">Months</h2>
+  {% for m in months %}
+  <details class="card summary-item">
+    <summary><strong>{{ m.start_day[:7] }}</strong> <span class="muted small">{{ m.start_day }} → {{ m.end_day }} · {{ m.entries_count }} entries</span></summary>
+    <div class="review-body">{{ m.content | review_md }}</div>
+  </details>
+  {% endfor %}
+  {% endif %}
+
+  <h2 class="section-title">Weeks</h2>
+  {% for w in weeks %}
+  <details class="card summary-item">
+    <summary>
+      <strong>{{ w.start_day }}</strong> <span class="muted small">→ {{ w.end_day }} · {{ w.entries_count }} entries</span>
+      {% if w.start_day in stale_weeks %}<span class="badge badge-warn">outdated</span>{% endif %}
+    </summary>
+    <div class="review-body">{{ w.content | review_md }}</div>
+  </details>
+  {% else %}
+  <p class="empty">No weekly summaries yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

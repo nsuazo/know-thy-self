@@ -30,6 +30,19 @@ class LLMResult:
 
 
 _lock = asyncio.Lock()
+_status: dict = {"at": 0.0, "ok": False, "detail": ""}
+
+
+def note_status(ok: bool, detail: str) -> None:
+    _status.update(at=time.monotonic(), ok=ok, detail=detail)
+
+
+async def cached_status(ttl: float = 10.0) -> tuple[bool, str]:
+    """Reachability, cached briefly so every open tab doesn't ping the LLM box."""
+    if time.monotonic() - _status["at"] > ttl:
+        ok, detail = await check_reachable()
+        note_status(ok, detail)
+    return _status["ok"], _status["detail"]
 
 
 def host() -> str:

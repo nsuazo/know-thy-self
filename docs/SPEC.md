@@ -86,14 +86,28 @@ and ones that are too harsh. No clinical diagnoses.
   **Action** (doable within 48h) and **Confidence**, then **Where the panel disagrees**.
 - Stored in `reviews` with a `parent_id` reserved for threaded follow-ups later.
 
-### Summaries and profile (Phase 3)
-- Weekly summaries (300–500 words, factual, dated citations); monthly summaries from weeklies.
-- A summary is stale if any covered entry was edited after it was generated.
-- Profile versions (read-only): stated vs enacted values, strengths, weaknesses and blind spots,
-  recurring patterns, how I see others, work, what's still unknown, what changed. Each claim has
-  evidence dates and a confidence level.
-- Manual "Catch up summaries" and "Update profile" buttons that process only what's new, plus an
-  overdue banner.
+### Summaries and profile (Phase 3, implemented)
+- **Weekly summaries** (Monday–Sunday, 300–500 words, factual, dated citations). Only complete weeks
+  are summarized. Mood/energy averages and todo flow are computed in code and handed to the model as
+  facts. Generated with `LLM_SUMMARY_THINKING` (default off) at temperature 0.3.
+- **Monthly summaries** are built from the weekly ones (about 600 words). A "month block" is the set of
+  weeks whose Monday falls in a calendar month, so blocks never overlap or leave gaps. A block with only
+  one content week gets no monthly summary.
+- **Staleness:** a weekly summary records the newest `updated_at` of its entries; editing any of them
+  later marks it outdated. A monthly summary is outdated if any of its weeks was regenerated.
+- **Catch up summaries** (manual) regenerates every missing or outdated week, then the months. Each
+  summary is saved as it completes, so a failure partway keeps the finished work and a rerun resumes.
+- **Review/profile context layers:** profile, then monthly summaries for months older than 13 weeks
+  before the verbatim part, weekly summaries after that, then verbatim entries (whole weeks, at least
+  the last 14 days). Weeks with no summary yet are included verbatim. Over budget, the oldest verbatim
+  weeks that have a summary are swapped for it first; only then are the oldest pieces dropped, and the
+  task prompt says what was left out.
+- **Profile** (read-only, versioned): stated vs. enacted values, strengths, weaknesses and blind spots,
+  recurring patterns, how you see others, work, what's still unknown, what changed. Every claim carries
+  dated evidence and a confidence tag. The first version reads all history through yesterday; each update
+  reads the previous profile plus only what is new since it. A banner suggests an update after 5 days of
+  entries (first profile) or 7 new days (later updates).
+- Pages: `/profile`, `/profile/{id}`, `/summaries`.
 
 ### Questions (Phase 4)
 - The LLM generates batches of 3–5 questions as JSON (`question, category, why, repeat_of_id`),

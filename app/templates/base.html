@@ -4,8 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Know Thy Self{% endblock %}</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/review.css">
+  <link rel="stylesheet" href="/static/profile.css">
 </head>
 <body>
   <header class="topbar">
@@ -13,6 +15,7 @@
     <nav>
       <a href="/" class="{{ 'active' if nav == 'journal' }}">Journal</a>
       <a href="/review" class="{{ 'active' if nav == 'review' }}">Review</a>
+      <a href="/profile" class="{{ 'active' if nav == 'profile' }}">Profile</a>
       <a href="/history" class="{{ 'active' if nav == 'history' }}">History</a>
     </nav>
     <span id="llm-badge" class="llm-badge" title="Checking the LLM server…"><span class="dot"></span><span class="llm-label">LLM</span></span>

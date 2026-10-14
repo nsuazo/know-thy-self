@@ -1,0 +1,14 @@
+{# Shared progress/error area for background LLM jobs. Driven by static/llm.js. #}
+<div class="job-ui" data-active-job="{{ active_job or '' }}">
+  <div class="job-progress" hidden>
+    <span class="spinner"></span>
+    <span class="job-text">Working…</span>
+    <span class="job-time muted">0:00</span>
+  </div>
+  <div class="job-bar" hidden><div class="job-bar-fill"></div></div>
+  <p class="muted small job-hint" hidden>If the model has to load first, this can take a minute or two.</p>
+  <div class="error-box job-error" hidden>
+    <p class="job-error-text"></p>
+    <button type="button" class="btn job-retry">Retry</button>
+  </div>
+</div>
