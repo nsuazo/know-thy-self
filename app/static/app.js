@@ -39,7 +39,9 @@
   }
 
   // ---------- textareas: autosave + autogrow ----------
-  const pending = new Map(); // key -> {timer, value}
+  const pending = new Map(); // key -> {timer}: edits not yet sent
+  const chains = new Map();  // key -> promise of the last save for that section
+  const queued = new Set();  // keys with a save waiting behind an in-flight one
 
   function autogrow(ta) {
     ta.style.height = "auto";
@@ -52,10 +54,24 @@
     if (!p) return;
     clearTimeout(p.timer);
     pending.delete(key);
-    send("PUT", `/api/day/${day}/section/${key}`, { content: ta.value }, opts).catch(() => {
-      // Re-queue so the next edit or blur retries.
-      pending.set(key, { timer: null });
-    });
+    const put = () =>
+      send("PUT", `/api/day/${day}/section/${key}`, { content: ta.value }, opts).catch(() => {
+        // Re-queue so the next edit or blur retries.
+        pending.set(key, { timer: null });
+      });
+    if (opts && opts.keepalive) {
+      put(); // page is unloading: queued work would never run, so send now
+      return;
+    }
+    // Saves for one section go out strictly one after another, so an older save can never land
+    // after a newer one. The queued save reads ta.value when it runs, so it always sends the latest text.
+    if (queued.has(key)) return;
+    queued.add(key);
+    const prev = chains.get(key) || Promise.resolve();
+    chains.set(key, prev.then(() => {
+      queued.delete(key);
+      return put();
+    }));
   }
 
   document.querySelectorAll("textarea[data-section]").forEach((ta) => {

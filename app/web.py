@@ -6,11 +6,12 @@ from fastapi.templating import Jinja2Templates
 from markdown_it import MarkdownIt
 from markupsafe import Markup, escape
 
-from .days import long_date, short_date
+from .days import local_day, long_date, short_date
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["long_date"] = long_date
 templates.env.filters["short_date"] = short_date
+templates.env.filters["local_day"] = local_day  # UTC timestamp -> local date
 
 
 def highlight(snippet: str) -> Markup:

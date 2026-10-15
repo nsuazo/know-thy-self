@@ -59,7 +59,7 @@
           <span class="y-mark">{% if y.status == 'done' %}&#10003;{% elif y.status == 'dropped' %}&ndash;{% else %}&#10007;{% endif %}</span>
           {{ y.text }}
           <span class="muted small">
-            {% if y.status == 'done_later' %}finished {{ y.completed_day }}{% elif y.status == 'dropped' %}dropped{% elif y.status == 'open' %}not done{% endif %}
+            {% if y.status == 'done_later' %}finished {{ y.completed_day }}{% elif y.status == 'dropped' %}dropped{% elif y.status == 'dropped_later' %}not done, dropped later{% elif y.status == 'open' %}not done{% endif %}
           </span>
         </li>
         {% endfor %}

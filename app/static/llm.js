@@ -101,6 +101,16 @@
   }
 
   async function run(startFn) {
+    if (root.dataset.starting === "1") return; // ignore double clicks while the request is out
+    root.dataset.starting = "1";
+    try {
+      await start(startFn);
+    } finally {
+      root.dataset.starting = "";
+    }
+  }
+
+  async function start(startFn) {
     lastStart = startFn;
     errorBox.hidden = true;
     let res;

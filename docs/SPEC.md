@@ -36,7 +36,8 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
     decomposer) can query: `SELECT content FROM entry_sections WHERE section_key = 'story_bank'`.
   - Retired in v2: random thoughts, grateful, work wins, personal wins, life advice, mental pattern,
     putting off, noticed about another person.
-- Autosave on an 800ms debounce and on blur. Empty days are not created just by viewing.
+- Autosave on an 800ms debounce and on blur, one request at a time per section. Empty days are not
+  created just by viewing.
 - Mood and energy (1–5, click again to clear) and free-form tags.
 
 ## Todos
@@ -44,8 +45,11 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 - An item is created on a day and stays open until completed or dropped.
 - Visible on day D when `created_day <= D`, not completed before D, and not dropped on or before D.
 - "Carried Nd" badge shows days since creation (highlighted at 3+).
-- "Did I finish yesterday's tasks?" lists the items that were open yesterday with their outcome
-  (done, finished later, dropped, not done), followed by a free-text reflection.
+- "Did I finish yesterday's tasks?" lists the items that were open yesterday with their outcome as of
+  that day (done, finished later, dropped that day, not done and dropped later, not done), followed by
+  a free-text reflection. A later drop never rewrites earlier reports.
+- A day counts as having content if it has text, mood, energy or tags, or if a todo was added,
+  finished or dropped that day.
 
 ## History and search
 
@@ -55,7 +59,7 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 ## Export
 
 - `DATA_DIR/export/YYYY/YYYY-MM-DD.md` with YAML front matter (date, mood, energy, tags), one
-  `##` heading per section, todos as task-list items.
+  `##` heading per section that has content (empty prompts are left out), todos as task-list items.
 - Runs nightly at `EXPORT_HOUR` and on demand from the History page; only changed files are written.
 
 ## Import (Phase 1b)
@@ -66,7 +70,8 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 ## LLM (Phases 2–4)
 
 ### Client
-- `LLM_BASE_URL`, `LLM_MODEL` from env. 600s timeout, one retry on timeout.
+- `LLM_BASE_URL`, `LLM_MODEL` from env. 600s timeout, no retry (a slow model will not be faster the second
+  time, and on a single-slot server the retry queues behind the abandoned request).
 - Reachability check (`GET /v1/models`, 3s) before each job; if unreachable, fail with a clear
   message and a retry button. No queueing.
 - One LLM call at a time (asyncio lock), matching the server's single slot.
@@ -137,6 +142,14 @@ and ones that are too harsh. No clinical diagnoses.
 ## Trends (Phase 5)
 
 Mood and energy over time, todo completion rate, average days carried, entry streak.
+
+## Security (LAN only, no login)
+
+- Host check: only IPs, `localhost`, single-label names, `.local`/`.lan`/`.home`/`.home.arpa`/
+  `.internal`/`.localdomain` names, and anything in `ALLOWED_HOSTS` are served. This blocks DNS
+  rebinding, where a website points its own domain at the LAN address to read the journal.
+- Origin check: POST/PUT/PATCH/DELETE with an `Origin` header from another site are refused (403).
+- Autosave sends one request at a time per section, so an older save can never overwrite a newer one.
 
 ## Deployment
 

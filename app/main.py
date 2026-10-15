@@ -13,6 +13,7 @@ from .config import settings
 from .days import now_local
 from .db import connect, init_db
 from .export import export_all
+from .guard import RequestGuard
 from .routes import history, jobs_api, journal, profile, review
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Know Thy Self", lifespan=lifespan, docs_url=None, redoc_url=None)
+app.add_middleware(RequestGuard)
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 app.include_router(journal.router)
 app.include_router(history.router)

@@ -92,7 +92,7 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); }
 .yesterday li { padding: 0.15rem 0; }
 .y-mark { display: inline-block; width: 1.2rem; }
 .y-done .y-mark { color: var(--ok); }
-.y-open .y-mark, .y-done_later .y-mark { color: var(--err); }
+.y-open .y-mark, .y-done_later .y-mark, .y-dropped_later .y-mark { color: var(--err); }
 .y-dropped { color: var(--muted); }
 
 /* History */

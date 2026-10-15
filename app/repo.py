@@ -198,12 +198,16 @@ def yesterday_report(conn: sqlite3.Connection, day: date) -> list[dict]:
     ).fetchall()
     out = []
     for r in rows:
+        # Report what was true as of `day`. Something dropped days later was simply not done
+        # yesterday; calling it "dropped" here would rewrite every earlier report.
         if r["completed_day"] == str(y):
             status = "done"
         elif r["completed_day"] is not None:
             status = "done_later"
-        elif r["dropped_day"] is not None:
+        elif r["dropped_day"] == str(day):
             status = "dropped"
+        elif r["dropped_day"] is not None:
+            status = "dropped_later"
         else:
             status = "open"
         out.append({"text": r["text"], "status": status, "completed_day": r["completed_day"]})

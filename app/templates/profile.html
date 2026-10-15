@@ -30,7 +30,7 @@
   <div class="review-head">
     <h2 class="section-title">Version {{ p.version }}{% if not is_latest %} <span class="muted small">(older version)</span>{% endif %}</h2>
     <p class="muted small">
-      {{ p.created_at[:10] | long_date }} · entries {{ p.covers_from }} → {{ p.covers_through }}
+      {{ p.created_at | local_day | long_date }} · entries {{ p.covers_from }} → {{ p.covers_through }}
       · {{ p.entries_count }} read{% if p.summaries_used %} + {{ p.summaries_used }} summaries{% endif %}
       {% if p.seconds %} · {{ p.seconds | round | int }}s{% endif %}
       {% if not is_latest %} · <a href="/profile">Back to latest</a>{% endif %}
@@ -46,7 +46,7 @@
     {% for v in versions %}
     <li>
       <a href="/profile/{{ v.id }}">Version {{ v.version }}</a>
-      <span class="muted small">{{ v.created_at[:10] }} · through {{ v.covers_through }} · {{ v.entries_count }} entries</span>
+      <span class="muted small">{{ v.created_at | local_day }} · through {{ v.covers_through }} · {{ v.entries_count }} entries</span>
     </li>
     {% endfor %}
   </ul>

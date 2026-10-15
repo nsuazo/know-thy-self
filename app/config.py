@@ -42,6 +42,13 @@ class Settings:
     )
     # Entries from at least this many recent days are always included verbatim.
     context_min_days: int = field(default_factory=lambda: _env_int("CONTEXT_MIN_DAYS", 14))
+    # Extra host names allowed besides IPs, localhost and local-looking names (see app/guard.py).
+    # Comma-separated; "*" disables the host check.
+    allowed_hosts: frozenset[str] = field(
+        default_factory=lambda: frozenset(
+            h.strip().lower() for h in _env("ALLOWED_HOSTS", "").split(",") if h.strip()
+        )
+    )
 
     @property
     def db_path(self) -> Path:

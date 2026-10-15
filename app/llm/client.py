@@ -90,26 +90,23 @@ async def chat(
     timeout = httpx.Timeout(settings.llm_timeout, connect=5.0)
     async with _lock:
         started = time.monotonic()
-        response: httpx.Response | None = None
-        for attempt in (1, 2):
-            try:
-                async with httpx.AsyncClient(timeout=timeout) as client:
-                    response = await client.post(url, json=payload)
-                break
-            except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
-                raise LLMError(unreachable_message(type(exc).__name__)) from exc
-            except httpx.TimeoutException as exc:
-                if attempt == 1:
-                    log.warning("LLM request timed out; retrying once")
-                    continue
-                raise LLMError(
-                    f"The LLM did not answer within {settings.llm_timeout}s (tried twice)."
-                ) from exc
-            except httpx.HTTPError as exc:
-                raise LLMError(f"Network error talking to the LLM: {type(exc).__name__}: {exc}") from exc
+        # No retry on timeout: a model still busy after LLM_TIMEOUT seconds is not going to be
+        # faster the second time, and on a single-slot server the retry can queue behind the
+        # abandoned request. Cold loads take well under a minute, far below the timeout.
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(url, json=payload)
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            raise LLMError(unreachable_message(type(exc).__name__)) from exc
+        except httpx.TimeoutException as exc:
+            raise LLMError(
+                f"The LLM did not answer within {settings.llm_timeout}s. Try a smaller scope or fewer "
+                "perspectives, or raise LLM_TIMEOUT."
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise LLMError(f"Network error talking to the LLM: {type(exc).__name__}: {exc}") from exc
         seconds = time.monotonic() - started
 
-    assert response is not None
     if response.status_code != 200:
         snippet = response.text.strip().replace("\n", " ")[:300]
         raise LLMError(f"LLM server returned HTTP {response.status_code}: {snippet}")

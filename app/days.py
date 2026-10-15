@@ -22,6 +22,11 @@ def parse_day(value: str) -> date:
         raise HTTPException(status_code=404, detail="Invalid date")
 
 
+def local_day(iso_utc: str) -> date:
+    """The local calendar date of a stored UTC timestamp (created_at etc.)."""
+    return datetime.fromisoformat(iso_utc).astimezone(ZoneInfo(settings.tz)).date()
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 

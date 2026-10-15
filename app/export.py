@@ -40,7 +40,8 @@ def entry_markdown(conn: sqlite3.Connection, entry: sqlite3.Row) -> str:
         elif s["kind"] == "yesterday":
             report = repo.yesterday_report(conn, day)
             lines = []
-            labels = {"done": "done", "done_later": "finished later", "dropped": "dropped", "open": "not done"}
+            labels = {"done": "done", "done_later": "finished later", "dropped": "dropped",
+                      "dropped_later": "not done, dropped later", "open": "not done"}
             for r in report:
                 mark = "x" if r["status"] == "done" else " "
                 lines.append(f"- [{mark}] {r['text']} — {labels[r['status']]}")
@@ -48,7 +49,8 @@ def entry_markdown(conn: sqlite3.Connection, entry: sqlite3.Row) -> str:
             body = "\n".join(lines) + ("\n\n" + text if text and lines else text)
         else:
             body = contents.get(s["key"], "").strip()
-        parts.append(f"## {s['label']}\n\n{body}".rstrip())
+        if body:
+            parts.append(f"## {s['label']}\n\n{body}")
     return "\n\n".join(parts) + "\n"
 
 

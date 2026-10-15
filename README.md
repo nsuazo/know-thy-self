@@ -43,12 +43,13 @@ in Unraid's Docker tab.
 | `EXPORT_HOUR` | `3` | Nightly Markdown export hour; `-1` disables |
 | `LLM_BASE_URL` | `http://192.168.1.80:8090/v1` | OpenAI-compatible endpoint |
 | `LLM_MODEL` | `gemma-official` | Model name sent with each request |
-| `LLM_TIMEOUT` | `600` | Seconds to wait for an answer (one retry on timeout) |
+| `LLM_TIMEOUT` | `600` | Seconds to wait for an answer (no retry: a timeout is reported as an error) |
 | `LLM_MAX_TOKENS` | `16384` | Output limit; thinking counts against it |
 | `LLM_ENABLE_THINKING` | `true` | `false` sends `enable_thinking=false` (test it first) |
 | `LLM_SUMMARY_THINKING` | `false` | Thinking for weekly/monthly summaries (the profile and reviews use `LLM_ENABLE_THINKING`) |
 | `CONTEXT_BUDGET_TOKENS` | `90000` | Prompt size budget; oldest entries are dropped first |
 | `CONTEXT_MIN_DAYS` | `14` | Recent days always included as context |
+| `ALLOWED_HOSTS` | _(empty)_ | Extra host names to accept, comma-separated (e.g. a reverse-proxy domain). IPs, `localhost`, single-label names like `tower`, and `.local`/`.lan`/`.home.arpa`/`.internal` names are always accepted. `*` turns the check off. |
 | `PUID` / `PGID` | `99` / `100` | Owner of `/data` (Unraid nobody:users) |
 
 ## Testing the LLM connection

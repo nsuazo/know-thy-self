@@ -39,7 +39,7 @@
     {% for r in past %}
     <li class="card entry-row">
       <div class="entry-row-head">
-        <a class="entry-date" href="/review/{{ r.id }}">{{ r.created_at[:10] | short_date }}</a>
+        <a class="entry-date" href="/review/{{ r.id }}">{{ r.created_at | local_day | short_date }}</a>
         <span class="muted small">
           {{ r.scope }}{% if r.start and r.start != r.end %} · {{ r.start }} → {{ r.end }}{% endif %}
           · {{ r.count }} perspective{{ '' if r.count == 1 else 's' }}

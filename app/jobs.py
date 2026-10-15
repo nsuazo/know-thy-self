@@ -16,6 +16,7 @@ from .llm.context import build_review_context
 
 log = logging.getLogger(__name__)
 _tasks: set[asyncio.Task] = set()
+_submit_lock = asyncio.Lock()  # the busy check and the insert must not interleave (double clicks, two tabs)
 
 
 class JobRejected(Exception):
@@ -55,15 +56,16 @@ def fail_stale_jobs(conn: sqlite3.Connection) -> None:
 
 async def submit(conn: sqlite3.Connection, kind: str, params: dict) -> int:
     """Checks that nothing else is running and the LLM is reachable, then starts the job."""
-    if active_job(conn):
-        raise JobRejected(409, "Another LLM job is already running. Wait for it to finish.")
-    ok, detail = await client.check_reachable()
-    client.note_status(ok, detail)
-    if not ok:
-        raise JobRejected(503, client.unreachable_message(detail))
-    job_id = create_job(conn, kind, params)
-    start(job_id)
-    return job_id
+    async with _submit_lock:
+        if active_job(conn):
+            raise JobRejected(409, "Another LLM job is already running. Wait for it to finish.")
+        ok, detail = await client.check_reachable()
+        client.note_status(ok, detail)
+        if not ok:
+            raise JobRejected(503, client.unreachable_message(detail))
+        job_id = create_job(conn, kind, params)
+        start(job_id)
+        return job_id
 
 
 def start(job_id: int) -> None:

@@ -21,6 +21,7 @@ YESTERDAY_LABELS = {
     "done": "done",
     "done_later": "not done that day (finished later)",
     "dropped": "dropped",
+    "dropped_later": "not done (dropped on a later day)",
     "open": "not done",
 }
 
