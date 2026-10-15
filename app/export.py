@@ -29,7 +29,7 @@ def entry_markdown(conn: sqlite3.Connection, entry: sqlite3.Row) -> str:
     fm.append("---")
 
     parts = ["\n".join(fm), f"# {long_date(day)}"]
-    for s in repo.get_sections(conn):
+    for s in repo.sections_for_entry(conn, entry["id"]):
         body = ""
         if s["kind"] == "todos":
             lines = []

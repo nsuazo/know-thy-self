@@ -63,7 +63,7 @@ def day_page(request: Request, day_str: str, conn: sqlite3.Connection = Depends(
             "prev_day": day - timedelta(days=1),
             "next_day": day + timedelta(days=1) if day < today else None,
             "entry": entry,
-            "sections": repo.get_sections(conn),
+            "groups": repo.section_groups(repo.sections_for_entry(conn, entry["id"] if entry else None)),
             "contents": contents,
             "tags": tags,
             "all_tags": repo.all_tags(conn),

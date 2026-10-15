@@ -18,11 +18,12 @@
     <fieldset>
       <legend>Perspectives
         <button type="button" class="link-btn" data-job-lock id="persp-all">all</button>
+        <button type="button" class="link-btn" data-job-lock id="persp-default">default</button>
         <button type="button" class="link-btn" data-job-lock id="persp-none">none</button>
       </legend>
       <div class="choices persp">
         {% for p in perspectives %}
-        <label class="choice"><input data-job-lock type="checkbox" name="perspective" value="{{ p.key }}" checked> {{ p.name }}</label>
+        <label class="choice"><input data-job-lock type="checkbox" name="perspective" value="{{ p.key }}" {{ 'checked' if p.default }}> {{ p.name }}</label>
         {% endfor %}
       </div>
     </fieldset>

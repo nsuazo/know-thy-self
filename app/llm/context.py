@@ -71,6 +71,7 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
     blocks: list[str] = []
     for s in sections:
         label = s["label"]
+        head = label if label.rstrip().endswith(("?", ":", ".")) else label + ":"
         if s["kind"] == "todos":
             todos = repo.todos_for_day(conn, day)
             if todos:
@@ -78,7 +79,7 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
                 for t in todos:
                     carried = f" (carried {t['carried_days']}d)" if t["carried_days"] > 0 else ""
                     lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{carried}")
-                blocks.append(f"**{label}:**\n" + "\n".join(lines))
+                blocks.append(f"**{head}**\n" + "\n".join(lines))
         elif s["kind"] == "yesterday":
             parts: list[str] = []
             report = repo.yesterday_report(conn, day)
@@ -88,11 +89,11 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
             if text:
                 parts.append(text)
             if parts:
-                blocks.append(f"**{label}:**\n" + "\n".join(parts))
+                blocks.append(f"**{head}**\n" + "\n".join(parts))
         else:
             text = contents.get(s["key"], "").strip()
             if text:
-                blocks.append(f"**{label}:**\n{text}")
+                blocks.append(f"**{head}**\n{text}")
 
     meta = []
     if entry["mood"] is not None:
@@ -114,13 +115,13 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
 
 def render_entries(conn: sqlite3.Connection, start: date, end: date) -> list[tuple[str, str]]:
     """[(day, text)] for entries in the range that render to something."""
-    sections = repo.get_sections(conn)
     rows = conn.execute(
         "SELECT * FROM entries WHERE day BETWEEN ? AND ? ORDER BY day", (str(start), str(end))
     ).fetchall()
     out = []
     for row in rows:
-        text = render_entry(conn, row, sections)
+        # Per entry, so answers under retired prompts still reach the model.
+        text = render_entry(conn, row, repo.sections_for_entry(conn, row["id"]))
         if text:
             out.append((row["day"], text))
     return out

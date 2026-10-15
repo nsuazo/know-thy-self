@@ -14,12 +14,49 @@ VISIBLE_ON_DAY = """
 
 # ---------- sections ----------
 
+CATEGORY_LABELS = {
+    "core": "Daily spine",
+    "todo_incubator": "Next actions",
+    "social_incubator": "People and stories",
+    "psych": "Inner signal",
+    "retired": "Retired prompts (older entries)",
+}
+
+
 def get_sections(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """The live template: active prompts only."""
     return conn.execute("SELECT * FROM sections WHERE active = 1 ORDER BY sort").fetchall()
 
 
+def sections_for_entry(conn: sqlite3.Connection, entry_id: int | None) -> list[sqlite3.Row]:
+    """Active prompts, then any retired prompt this entry has an answer for.
+
+    Retiring a prompt must never hide what was already written under it.
+    """
+    if entry_id is None:
+        return get_sections(conn)
+    return conn.execute(
+        "SELECT * FROM sections s WHERE s.active = 1 "
+        "OR EXISTS (SELECT 1 FROM entry_sections es WHERE es.entry_id = ? AND es.section_key = s.key "
+        "           AND TRIM(es.content) <> '') "
+        "ORDER BY s.active DESC, s.sort",
+        (entry_id,),
+    ).fetchall()
+
+
+def section_groups(sections: list[sqlite3.Row]) -> list[dict]:
+    """Group sections by category, in order of first appearance, for the day page."""
+    groups: dict[str, dict] = {}
+    for s in sections:
+        cat = s["category"] if s["active"] else "retired"
+        g = groups.setdefault(cat, {"key": cat, "label": CATEGORY_LABELS.get(cat, cat), "sections": []})
+        g["sections"].append(s)
+    return list(groups.values())
+
+
 def section_by_key(conn: sqlite3.Connection, key: str) -> sqlite3.Row | None:
-    return conn.execute("SELECT * FROM sections WHERE key = ? AND active = 1", (key,)).fetchone()
+    # Retired prompts stay editable: an old day may still show one with an answer in it.
+    return conn.execute("SELECT * FROM sections WHERE key = ?", (key,)).fetchone()
 
 
 # ---------- entries ----------
@@ -212,7 +249,7 @@ def entry_days(conn: sqlite3.Connection) -> list[str]:
 # ---------- history & search ----------
 
 def list_entries(conn: sqlite3.Connection, limit: int = 500) -> list[dict]:
-    order = [s["key"] for s in get_sections(conn)]
+    order = [s["key"] for s in conn.execute("SELECT key FROM sections ORDER BY active DESC, sort")]
     rows = conn.execute(
         "SELECT id, day, mood, energy FROM entries ORDER BY day DESC LIMIT ?", (limit,)
     ).fetchall()

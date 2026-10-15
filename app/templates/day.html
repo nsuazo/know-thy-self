@@ -38,7 +38,10 @@
     </div>
   </section>
 
-  {% for s in sections %}
+  {% for g in groups %}
+  <details class="group{{ ' group-retired' if g.key == 'retired' }}" data-group="{{ g.key }}" open>
+  <summary>{{ g.label }}</summary>
+  {% for s in g.sections %}
   <section class="card section" id="s-{{ s.key }}">
     <h2>{{ s.label }}</h2>
 
@@ -70,6 +73,8 @@
       <textarea data-section="{{ s.key }}" rows="3">{{ contents.get(s.key, '') }}</textarea>
     {% endif %}
   </section>
+  {% endfor %}
+  </details>
   {% endfor %}
 
 </div>

@@ -141,6 +141,12 @@
     });
     const setAll = (v) => form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = v));
     document.getElementById("persp-all").addEventListener("click", () => setAll(true));
+    const resetBtn = document.getElementById("persp-default");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () =>
+        form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = i.defaultChecked))
+      );
+    }
     document.getElementById("persp-none").addEventListener("click", () => setAll(false));
   }
 

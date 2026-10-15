@@ -18,11 +18,24 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 ## Journal
 
 - One entry per **logical day**: a day rolls over at `DAY_CUTOFF_HOUR` (default 4am) local time.
-- Template sections live in the `sections` table (key, label, sort, kind, active), so prompts can
-  change later without breaking old entries. Kinds: `text`, `todos`, `yesterday`.
-- Sections: daily random thoughts; grateful for; work accomplishments; personal successes; life
-  advice; todo list; mental pattern to break; something I've put off; did I finish yesterday's
-  tasks; something I noticed about another person.
+- Template sections live in the `sections` table (key, label, sort, kind, active, category), so prompts
+  can change later without breaking old entries. Kinds: `text`, `todos`, `yesterday`. A prompt is
+  retired with `active = 0`, never deleted; an entry that has an answer under a retired prompt still
+  shows it (day page, export, history, LLM context).
+- Template v2 (migration 004), 14 prompts in four groups that can be collapsed on the day page:
+  - **Daily spine** (`core`): yesterday's autopsy (`yesterday`), realistic commitments (`todos`),
+    what I moved forward (`moved_forward`), mental RAM (`mental_ram`).
+  - **Next actions** (`todo_incubator`): first three tiny steps (`atomic_breakdown`), highest-leverage
+    next action (`next_action`), which bigger goal moved (`horizon`), overcomplication check
+    (`good_enough`).
+  - **People and stories** (`social_incubator`): story bank (`story_bank`), open loops about people
+    (`open_loops`), tomorrow's social prep (`social_prep`), the mirror (`mirror`).
+  - **Inner signal** (`psych`): attention leaks and the feeling behind them (`escape_hatch`), loudest
+    internal voice (`loud_voice`).
+  - The `category` and the section keys are stable handles that future tools (a social prep app, a task
+    decomposer) can query: `SELECT content FROM entry_sections WHERE section_key = 'story_bank'`.
+  - Retired in v2: random thoughts, grateful, work wins, personal wins, life advice, mental pattern,
+    putting off, noticed about another person.
 - Autosave on an 800ms debounce and on blur. Empty days are not created just by viewing.
 - Mood and energy (1–5, click again to clear) and free-form tags.
 
@@ -81,7 +94,10 @@ and ones that are too harsh. No clinical diagnoses.
 
 ### Review panel (Phase 2)
 - Scope: today / 7d (default) / 30d / all. Perspective checkboxes, all on by default.
-- Perspectives: Stoic, Existentialist, CBT, ACT, Psychodynamic, IFS, Skeptic, Strengths Coach.
+- Perspectives (11, each with a `default` flag for the Review page checkboxes): Stoic, Aristotelian\*,
+  Existentialist, CBT, ACT\*, Psychodynamic, IFS\*, Skeptic, Strengths Coach, Systems Architect
+  (task granularity, activation energy, productive procrastination), Social Coach (conversation prep,
+  curiosity about others, follow-through on open loops). \* = off by default; the other eight are on.
 - Markdown output, one `## <Perspective>` per perspective with **Read**, **Challenge**,
   **Action** (doable within 48h) and **Confidence**, then **Where the panel disagrees**.
 - Stored in `reviews` with a `parent_id` reserved for threaded follow-ups later.
@@ -103,7 +119,8 @@ and ones that are too harsh. No clinical diagnoses.
   weeks that have a summary are swapped for it first; only then are the oldest pieces dropped, and the
   task prompt says what was left out.
 - **Profile** (read-only, versioned): stated vs. enacted values, strengths, weaknesses and blind spots,
-  recurring patterns, how you see others, work, what's still unknown, what changed. Every claim carries
+  recurring patterns, relationships and social patterns (and how you see others), work, goals and task
+  execution mechanics, what's still unknown, what changed. Every claim carries
   dated evidence and a confidence tag. The first version reads all history through yesterday; each update
   reads the previous profile plus only what is new since it. A banner suggests an update after 5 days of
   entries (first profile) or 7 new days (later updates).
@@ -112,7 +129,9 @@ and ones that are too harsh. No clinical diagnoses.
 ### Questions (Phase 4)
 - The LLM generates batches of 3–5 questions as JSON (`question, category, why, repeat_of_id`),
   targeting profile gaps. Categories: values, strengths, weaknesses, relationships, work, habits,
-  fears, goals, identity. Answer, skip, or regenerate.
+  fears, goals, identity, `social_prep` (flesh out a story, name who to get closer to, dissect an awkward
+  interaction) and `task_breakdown` (take a long-term goal from the profile or a todo carried 7+ days and
+  break it down on the spot). Answer, skip, or regenerate.
 - Questions can be re-asked after 60+ days; answers are kept as a history per question.
 
 ## Trends (Phase 5)

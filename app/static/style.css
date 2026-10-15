@@ -109,3 +109,15 @@ textarea:focus, input:focus { outline: none; border-color: var(--accent); }
 .snippet { margin: 0.4rem 0 0; color: var(--muted); font-family: var(--serif); }
 .tag { font-size: 0.75rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--accent-dim); color: var(--text); }
 mark { background: #5c4a14; color: var(--text); border-radius: 3px; padding: 0 2px; }
+
+/* Template groups on the day page */
+.group { margin-bottom: 0.4rem; }
+.group > summary {
+  cursor: pointer; list-style: none; user-select: none; margin: 1.1rem 0 0.6rem;
+  font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::before { content: "\25BE"; display: inline-block; width: 1.1rem; }
+.group:not([open]) > summary::before { content: "\25B8"; }
+.group > summary:hover { color: var(--text); }
+.group-retired .section h2 { color: var(--muted); font-weight: 500; }
