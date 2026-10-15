@@ -11,6 +11,7 @@ from .config import settings
 from .days import utc_now_iso
 from .db import connect
 from .llm import client, summarize
+from .llm.actions import split_actions
 from .llm.client import LLMError
 from .llm.context import build_review_context
 
@@ -132,18 +133,21 @@ async def _run(job_id: int) -> None:
 async def _do_review(conn: sqlite3.Connection, params: dict) -> int:
     scope = params["scope"]
     keys = params["perspectives"]
-    ctx = await asyncio.to_thread(build_review_context, conn, scope, keys)
+    distill = bool(params.get("distill", False))
+    ctx = await asyncio.to_thread(build_review_context, conn, scope, keys, None, distill)
     log.info(
         "Review: scope=%s perspectives=%d entries=%d summaries=%d omitted=%d ~%d tokens",
         scope, len(keys), ctx.entries_included, ctx.summaries_used, ctx.entries_omitted, ctx.est_tokens,
     )
     result = await client.chat(ctx.messages, temperature=0.9)
+    _, actions = split_actions(result.content) if distill else ("", [])
     cur = conn.execute(
-        "INSERT INTO reviews (scope, range_start, range_end, perspectives, content, model, "
+        "INSERT INTO reviews (scope, range_start, range_end, perspectives, content, actions, model, "
         "prompt_tokens, completion_tokens, seconds, entries_included, entries_omitted, summaries_used, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            scope, str(ctx.start), str(ctx.end), json.dumps(keys), result.content, settings.llm_model,
+            scope, str(ctx.start), str(ctx.end), json.dumps(keys), result.content,
+            json.dumps([{"text": a, "todo_id": None} for a in actions]) if actions else None, settings.llm_model,
             result.prompt_tokens, result.completion_tokens, round(result.seconds, 1),
             ctx.entries_included, ctx.entries_omitted, ctx.summaries_used, utc_now_iso(),
         ),

@@ -24,7 +24,8 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
   shows it (day page, export, history, LLM context).
 - Template v2 (migration 004), 14 prompts in four groups that can be collapsed on the day page:
   - **Daily spine** (`core`): yesterday's autopsy (`yesterday`), realistic commitments (`todos`),
-    what I moved forward (`moved_forward`), mental RAM (`mental_ram`).
+    what I moved forward (`moved_forward`), grateful for (`grateful`, restored in migration 005),
+    mental RAM (`mental_ram`).
   - **Next actions** (`todo_incubator`): first three tiny steps (`atomic_breakdown`), highest-leverage
     next action (`next_action`), which bigger goal moved (`horizon`), overcomplication check
     (`good_enough`).
@@ -34,7 +35,7 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
     internal voice (`loud_voice`).
   - The `category` and the section keys are stable handles that future tools (a social prep app, a task
     decomposer) can query: `SELECT content FROM entry_sections WHERE section_key = 'story_bank'`.
-  - Retired in v2: random thoughts, grateful, work wins, personal wins, life advice, mental pattern,
+  - Retired in v2: random thoughts, work wins, personal wins, life advice, mental pattern,
     putting off, noticed about another person.
 - Autosave on an 800ms debounce and on blur, one request at a time per section. Empty days are not
   created just by viewing.
@@ -45,6 +46,10 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 - An item is created on a day and stays open until completed or dropped.
 - Visible on day D when `created_day <= D`, not completed before D, and not dropped on or before D.
 - "Carried Nd" badge shows days since creation (highlighted at 3+).
+- Todo text can be edited in place (hover, "edit"; Enter saves, Escape cancels). A drop can be undone on
+  the same day only ("Dropped today: … undo"), so earlier reports are never rewritten.
+- Todos added from a review carry `source_review_id`, show a "panel" badge linking to the review, and
+  are marked "(suggested by a panel review)" in LLM context so later reviews can judge follow-through.
 - "Did I finish yesterday's tasks?" lists the items that were open yesterday with their outcome as of
   that day (done, finished later, dropped that day, not done and dropped later, not done), followed by
   a free-text reflection. A later drop never rewrites earlier reports.
@@ -105,6 +110,11 @@ and ones that are too harsh. No clinical diagnoses.
   curiosity about others, follow-through on open loops). \* = off by default; the other eight are on.
 - Markdown output, one `## <Perspective>` per perspective with **Read**, **Challenge**,
   **Action** (doable within 48h) and **Confidence**, then **Where the panel disagrees**.
+- Optional final section **Distilled actions** (on by default): the panel's 1-3 most important actions,
+  each a small physical step under 30 minutes, not duplicating open todos, as `- ACTION: …` lines. They
+  are parsed into `reviews.actions` (JSON `[{text, todo_id}]`) and shown under the review with editable
+  text and an "Add to tomorrow" button, which creates a todo dated the next logical day. Nothing is added
+  automatically.
 - Stored in `reviews` with a `parent_id` reserved for threaded follow-ups later.
 
 ### Summaries and profile (Phase 3, implemented)

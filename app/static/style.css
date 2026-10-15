@@ -121,3 +121,13 @@ mark { background: #5c4a14; color: var(--text); border-radius: 3px; padding: 0 2
 .group:not([open]) > summary::before { content: "\25B8"; }
 .group > summary:hover { color: var(--text); }
 .group-retired .section h2 { color: var(--muted); font-weight: 500; }
+
+/* Todo extras */
+.link-btn.link-quiet:hover { color: var(--text); }
+.todo .link-quiet { visibility: hidden; }
+.todo:hover .link-quiet, .todo .link-quiet:focus { visibility: visible; }
+.todo-edit { flex: 1; padding: 0.25rem 0.5rem; }
+.badge-panel { color: var(--accent); border-color: var(--accent-dim); }
+.badge-panel:hover { text-decoration: none; color: var(--text); }
+.dropped-today { margin: 0 0 0.6rem; }
+.dropped-today span { white-space: nowrap; }

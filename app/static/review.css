@@ -35,3 +35,13 @@
 .review-body strong { color: var(--text); font-family: var(--font); font-size: 0.85rem; letter-spacing: 0.02em; }
 .review-body a { border-bottom: 1px dotted var(--accent); }
 .review-body a:hover { text-decoration: none; border-bottom-style: solid; }
+
+/* Distilled actions */
+.actions-card h2 { font-size: 1.05rem; color: var(--accent); margin: 0 0 0.4rem; }
+.action-list { list-style: none; padding: 0; margin: 0.8rem 0 0; display: grid; gap: 0.5rem; }
+.action-row { display: flex; gap: 0.6rem; align-items: center; }
+.action-row input { flex: 1; }
+.action-row.added input { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--ok); }
+.action-row.added .btn { color: var(--ok); border-color: var(--ok); }
+.added-from { margin: 1rem 0 0; }
+.added-item { white-space: normal; }

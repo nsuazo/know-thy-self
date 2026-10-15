@@ -79,7 +79,8 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
                 lines = []
                 for t in todos:
                     carried = f" (carried {t['carried_days']}d)" if t["carried_days"] > 0 else ""
-                    lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{carried}")
+                    panel = " (suggested by a panel review)" if t["from_review"] else ""
+                    lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{carried}{panel}")
                 blocks.append(f"**{head}**\n" + "\n".join(lines))
         elif s["kind"] == "yesterday":
             parts: list[str] = []
@@ -248,6 +249,7 @@ def build_review_context(
     scope: str,
     perspective_keys: list[str],
     today: date | None = None,
+    distill: bool = False,
 ) -> BuiltContext:
     today = today or logical_today()
     perspectives = [BY_KEY[k] for k in perspective_keys if k in BY_KEY]
@@ -279,6 +281,7 @@ def build_review_context(
         entries_included=entries_included,
         omitted_before=date.fromisoformat(units[0].sort) if (omitted or summaries_dropped) else None,
         summaries_used=summaries_used,
+        distill=distill,
     )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},

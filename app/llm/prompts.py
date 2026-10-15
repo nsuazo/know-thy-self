@@ -10,7 +10,7 @@ INPUT FORMAT
 The input is made of up to four parts, always in this order:
 - "# PROFILE": an earlier, AI-written working profile of the author. Treat it as a set of hypotheses to test against the entries, never as established fact. Correct it when the entries disagree.
 - "# EARLIER PERIODS": AI-written summaries of older weeks and months. They are compressed but reliable about events and dates; cite their dates as you would entries.
-- "# JOURNAL ENTRIES": the original entries, oldest first, each under a "### YYYY-MM-DD (Weekday)" heading. An entry may include mood and energy on a 1-5 scale, tags, free-text sections, the day's todo list ([x] done, [ ] open, "carried Nd" = days since the item was first added), and a report on the previous day's todos. Empty sections are omitted. Each section is introduced by the exact question the author was asked. The journal's questions were revised over time, so older entries may answer different questions than newer ones; judge each answer against the question printed above it.
+- "# JOURNAL ENTRIES": the original entries, oldest first, each under a "### YYYY-MM-DD (Weekday)" heading. An entry may include mood and energy on a 1-5 scale, tags, free-text sections, the day's todo list ([x] done, [ ] open, "carried Nd" = days since the item was first added, "suggested by a panel review" = the author accepted it from an earlier review's distilled actions, so whether it gets done shows how they act on feedback), and a report on the previous day's todos. Empty sections are omitted. Each section is introduced by the exact question the author was asked. The journal's questions were revised over time, so older entries may answer different questions than newer ones; judge each answer against the question printed above it.
 - "# TASK": what to produce.
 
 WHAT THE AUTHOR IS WORKING ON
@@ -46,6 +46,7 @@ def review_task(
     entries_included: int,
     omitted_before: date | None = None,
     summaries_used: int = 0,
+    distill: bool = False,
 ) -> str:
     lens_lines = "\n".join(f"- {p.name}: {p.lens}" for p in perspectives)
 
@@ -79,13 +80,24 @@ For each perspective, in the order listed, write exactly this structure:
 **Confidence:** Solid or Thin, followed by one clause saying why."""
 
     closing = (
-        "\n\nThen finish with a final section:\n\n## Where the panel disagrees\n"
+        "\n\nThen add this section:\n\n## Where the panel disagrees\n"
         "Name the two or three most important points on which the perspectives above "
         "actually conflict, say who takes which side, and say which side the evidence favors "
         "and why. If they truly agree, say so in one sentence."
         if multi
-        else "\n\nDo not add any other sections."
+        else ""
     )
+    if distill:
+        closing += (
+            "\n\nFinish with this section:\n\n## Distilled actions\n"
+            "Weigh everything above and pick the one to three actions that matter most right now, most "
+            "important first. Each must be a single small, physical step the author can start tomorrow and "
+            "finish in under 30 minutes, written as a todo item in the imperative, under 15 words. Do not "
+            "repeat an item already on the author's open todo list; turning a long-carried item into its "
+            "first concrete step is encouraged. Write each on its own line in exactly this form, with "
+            "nothing else in the section:\n- ACTION: <the todo item>"
+        )
+    closing += "\n\nDo not add any other sections."
 
     return (
         "# TASK\n\n"

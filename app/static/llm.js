@@ -146,7 +146,8 @@
         const scope = form.elements.scope.value;
         const perspectives = [...form.querySelectorAll("input[name=perspective]:checked")].map((i) => i.value);
         if (perspectives.length === 0) throw new Error("Pick at least one perspective.");
-        return post("/api/review", { scope, perspectives });
+        const distill = form.elements.distill ? form.elements.distill.checked : true;
+        return post("/api/review", { scope, perspectives, distill });
       });
     });
     const setAll = (v) => form.querySelectorAll("input[name=perspective]").forEach((i) => (i.checked = v));

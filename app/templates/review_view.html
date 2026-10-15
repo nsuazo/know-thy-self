@@ -21,9 +21,33 @@
   </div>
 
   <article class="card review-body">
-    {{ r.content | review_md }}
+    {{ body | review_md }}
   </article>
+
+  {% if actions or added %}
+  <section class="card actions-card" id="actions" data-review="{{ r.id }}">
+    <h2>Distilled actions</h2>
+    {% if actions %}
+    <p class="muted small">Edit the wording if you like, then add the ones you'll actually do. They go on your list for {{ tomorrow | short_date }}.</p>
+    <ul class="action-list">
+      {% for a in actions %}
+      <li class="action-row{{ ' added' if a.added }}" data-index="{{ loop.index0 }}">
+        <input type="text" maxlength="500" value="{{ a.text }}" {{ 'disabled' if a.added }}>
+        <button type="button" class="btn" data-add-action {{ 'disabled' if a.added }}>{{ 'Added' if a.added else 'Add to tomorrow' }}</button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if added %}
+    <p class="muted small added-from">From this review on your list:
+      {% for t in added %}<span class="added-item">{{ t.text }}
+        <span class="muted">({% if t.completed_day %}done {{ t.completed_day }}{% elif t.dropped_day %}dropped {{ t.dropped_day }}{% else %}open since {{ t.created_day }}{% endif %})</span></span>{% if not loop.last %} · {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+  </section>
+  {% endif %}
 
   <p><a class="btn" href="/review">Run another review</a></p>
 </div>
 {% endblock %}
+{% block scripts %}<script src="/static/actions.js"></script>{% endblock %}

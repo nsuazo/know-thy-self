@@ -5,9 +5,13 @@
       <input type="checkbox" data-todo-toggle="{{ t.id }}" {{ 'checked' if t.done }}>
       <span class="todo-text">{{ t.text }}</span>
     </label>
+    {% if t.from_review %}
+    <a class="badge badge-panel" href="/review/{{ t.from_review }}" title="Suggested by a panel review">panel</a>
+    {% endif %}
     {% if t.carried_days > 0 %}
     <span class="badge {{ 'badge-warn' if t.carried_days >= 3 }}" title="First added {{ t.created_day }}">carried {{ t.carried_days }}d</span>
     {% endif %}
+    <button type="button" class="link-btn link-quiet" data-todo-edit="{{ t.id }}" title="Edit the wording">edit</button>
     {% if not t.done %}
     <button type="button" class="link-btn" data-todo-drop="{{ t.id }}" title="Drop this item">drop</button>
     {% endif %}
@@ -16,3 +20,8 @@
   <li class="empty">Nothing on the list.</li>
   {% endfor %}
 </ul>
+{% if dropped %}
+<p class="dropped-today muted small">Dropped today:
+  {% for d in dropped %}<span>{{ d.text }} <button type="button" class="link-btn link-quiet" data-todo-undrop="{{ d.id }}">undo</button></span>{% if not loop.last %} · {% endif %}{% endfor %}
+</p>
+{% endif %}

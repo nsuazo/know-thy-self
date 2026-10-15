@@ -184,6 +184,7 @@ def todos_for_day(conn: sqlite3.Connection, day: date) -> list[dict]:
                 "done": r["completed_day"] == str(day),
                 "carried_days": (day - created).days,
                 "created_day": r["created_day"],
+                "from_review": r["source_review_id"],
             }
         )
     return out
@@ -225,6 +226,49 @@ def add_todo(conn: sqlite3.Connection, day: date, text: str) -> None:
         )
         entry_id = ensure_entry(conn, day)
         touch_entry(conn, entry_id)
+
+
+def add_todo_from_review(conn: sqlite3.Connection, day: date, text: str, review_id: int) -> int | None:
+    """A distilled review action put on a (usually future) day's list. No entry row is created for
+    that day; it appears once the day comes and you write in it."""
+    text = " ".join(text.split())
+    if not text:
+        return None
+    cur = conn.execute(
+        "INSERT INTO todos (text, created_day, created_at, source_review_id) VALUES (?, ?, ?, ?)",
+        (text, str(day), utc_now_iso(), review_id),
+    )
+    return cur.lastrowid
+
+
+def todos_from_review(conn: sqlite3.Connection, review_id: int) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT * FROM todos WHERE source_review_id = ? ORDER BY id", (review_id,)
+    ).fetchall()
+
+
+def edit_todo(conn: sqlite3.Connection, todo_id: int, day: date, text: str) -> None:
+    text = " ".join(text.split())
+    if not text:
+        return
+    with tx(conn):
+        conn.execute("UPDATE todos SET text = ? WHERE id = ?", (text, todo_id))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def todos_dropped_on(conn: sqlite3.Connection, day: date) -> list[sqlite3.Row]:
+    return conn.execute(
+        "SELECT id, text FROM todos WHERE dropped_day = ? ORDER BY id", (str(day),)
+    ).fetchall()
+
+
+def undrop_todo(conn: sqlite3.Connection, todo_id: int, day: date) -> None:
+    """Undo only works on the day of the drop, so earlier reports are never rewritten."""
+    with tx(conn):
+        conn.execute(
+            "UPDATE todos SET dropped_day = NULL WHERE id = ? AND dropped_day = ?", (todo_id, str(day))
+        )
+        touch_entry(conn, ensure_entry(conn, day))
 
 
 def toggle_todo(conn: sqlite3.Connection, todo_id: int, day: date) -> None:

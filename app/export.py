@@ -35,6 +35,8 @@ def entry_markdown(conn: sqlite3.Connection, entry: sqlite3.Row) -> str:
             lines = []
             for t in _todos_visible(conn, day):
                 suffix = f" _(carried {t['carried_days']}d)_" if t["carried_days"] > 0 else ""
+                if t["from_review"]:
+                    suffix += " _(from a review)_"
                 lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{suffix}")
             body = "\n".join(lines)
         elif s["kind"] == "yesterday":

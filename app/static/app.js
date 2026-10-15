@@ -148,9 +148,44 @@
       if (id) todoAction(`/api/day/${day}/todos/${id}/toggle`);
     });
     todos.addEventListener("click", (e) => {
-      const id = e.target.dataset.todoDrop;
-      if (id) todoAction(`/api/day/${day}/todos/${id}/drop`);
+      const ds = e.target.dataset;
+      if (ds.todoDrop) todoAction(`/api/day/${day}/todos/${ds.todoDrop}/drop`);
+      else if (ds.todoUndrop) todoAction(`/api/day/${day}/todos/${ds.todoUndrop}/undrop`);
+      else if (ds.todoEdit) startEdit(e.target.closest("li"), ds.todoEdit);
     });
+
+    // Inline edit: Enter saves, Escape or clicking away cancels.
+    function startEdit(li, id) {
+      const span = li.querySelector(".todo-text");
+      if (!span) return;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "todo-edit";
+      input.maxLength = 500;
+      input.value = span.textContent;
+      const label = li.querySelector("label");
+      label.replaceWith(input);
+      input.focus();
+      input.select();
+      let done = false;
+      const cancel = () => {
+        if (done) return;
+        done = true;
+        if (input.isConnected) input.replaceWith(label); // nothing is sent
+      };
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          const text = input.value.trim();
+          if (!text) return;
+          done = true;
+          todoAction(`/api/day/${day}/todos/${id}/edit`, { text });
+        } else if (ev.key === "Escape") {
+          cancel();
+        }
+      });
+      input.addEventListener("blur", cancel);
+    }
     const form = document.getElementById("todo-add");
     form.addEventListener("submit", async (e) => {
       e.preventDefault();

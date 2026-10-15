@@ -68,6 +68,7 @@ def day_page(request: Request, day_str: str, conn: sqlite3.Connection = Depends(
             "tags": tags,
             "all_tags": repo.all_tags(conn),
             "todos": repo.todos_for_day(conn, day),
+            "dropped": repo.todos_dropped_on(conn, day),
             "yesterday": repo.yesterday_report(conn, day),
         },
     )
@@ -99,7 +100,8 @@ def save_tags(day_str: str, body: TagsIn, conn: sqlite3.Connection = Depends(get
 
 def _todos_partial(request: Request, conn: sqlite3.Connection, day):
     return templates.TemplateResponse(
-        request, "_todos.html", {"day": day, "todos": repo.todos_for_day(conn, day)}
+        request, "_todos.html",
+        {"day": day, "todos": repo.todos_for_day(conn, day), "dropped": repo.todos_dropped_on(conn, day)},
     )
 
 
@@ -121,4 +123,18 @@ def toggle_todo(request: Request, day_str: str, todo_id: int, conn: sqlite3.Conn
 def drop_todo(request: Request, day_str: str, todo_id: int, conn: sqlite3.Connection = Depends(get_db)):
     day = _check_day(day_str)
     repo.drop_todo(conn, todo_id, day)
+    return _todos_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/todos/{todo_id}/edit", response_class=HTMLResponse)
+def edit_todo(request: Request, day_str: str, todo_id: int, body: TodoIn, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.edit_todo(conn, todo_id, day, body.text)
+    return _todos_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/todos/{todo_id}/undrop", response_class=HTMLResponse)
+def undrop_todo(request: Request, day_str: str, todo_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.undrop_todo(conn, todo_id, day)
     return _todos_partial(request, conn, day)
