@@ -9,13 +9,14 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 # An entry row (alias e) counts as having content if it has any text, mood, energy or tags, or if
-# a todo was added, finished or dropped that day (a day of only checking things off still counts).
+# a todo or long-term goal was added, finished or dropped that day.
 CONTENT_SQL = """(
     e.mood IS NOT NULL OR e.energy IS NOT NULL
     OR EXISTS (SELECT 1 FROM entry_sections s WHERE s.entry_id = e.id AND TRIM(s.content) <> '')
     OR EXISTS (SELECT 1 FROM entry_tags t WHERE t.entry_id = e.id)
     OR EXISTS (SELECT 1 FROM todos td WHERE td.created_day = e.day OR td.completed_day = e.day
                OR td.dropped_day = e.day)
+    OR EXISTS (SELECT 1 FROM goals g WHERE g.created_day = e.day OR g.done_day = e.day OR g.dropped_day = e.day)
 )"""
 
 

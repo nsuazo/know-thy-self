@@ -15,7 +15,8 @@ VISIBLE_ON_DAY = """
 # ---------- sections ----------
 
 CATEGORY_LABELS = {
-    "core": "Daily spine",
+    "core": "Goals and today",
+    "grab_bag": "Grab bag",
     "todo_incubator": "Next actions",
     "social_incubator": "People and stories",
     "psych": "Inner signal",
@@ -174,6 +175,7 @@ def todos_for_day(conn: sqlite3.Connection, day: date) -> list[dict]:
         f"SELECT * FROM todos WHERE {VISIBLE_ON_DAY} ORDER BY created_day, id",
         {"d": str(day)},
     ).fetchall()
+    goal_titles = {r["id"]: r["text"] for r in conn.execute("SELECT id, text FROM goals")}
     out = []
     for r in rows:
         created = date.fromisoformat(r["created_day"])
@@ -185,6 +187,7 @@ def todos_for_day(conn: sqlite3.Connection, day: date) -> list[dict]:
                 "carried_days": (day - created).days,
                 "created_day": r["created_day"],
                 "from_review": r["source_review_id"],
+                "goal": goal_titles.get(r["source_goal_id"]) if r["source_goal_id"] else None,
             }
         )
     return out
@@ -358,3 +361,106 @@ def profile_versions(conn: sqlite3.Connection) -> list[sqlite3.Row]:
         "SELECT id, version, covers_from, covers_through, entries_count, created_at "
         "FROM profile_versions ORDER BY version DESC"
     ).fetchall()
+
+
+# ---------- long-term goals ----------
+# Same visibility rule as todos: a goal shows on day D from the day it was added until it is
+# achieved (shown checked on that day) or dropped.
+
+GOAL_VISIBLE_ON_DAY = """
+    created_day <= :d
+    AND (done_day IS NULL OR done_day >= :d)
+    AND (dropped_day IS NULL OR dropped_day > :d)
+"""
+
+
+def goals_for_day(conn: sqlite3.Connection, day: date) -> list[dict]:
+    rows = conn.execute(
+        f"SELECT * FROM goals WHERE {GOAL_VISIBLE_ON_DAY} ORDER BY created_day, id", {"d": str(day)}
+    ).fetchall()
+    return [
+        {"id": r["id"], "text": r["text"], "done": r["done_day"] == str(day), "created_day": r["created_day"]}
+        for r in rows
+    ]
+
+
+def active_goals(conn: sqlite3.Connection, day: date) -> list[sqlite3.Row]:
+    """Goals still being pursued as of `day` (not achieved or dropped by then)."""
+    return conn.execute(
+        "SELECT * FROM goals WHERE created_day <= ? AND (done_day IS NULL OR done_day > ?) "
+        "AND (dropped_day IS NULL OR dropped_day > ?) ORDER BY created_day, id",
+        (str(day), str(day), str(day)),
+    ).fetchall()
+
+
+def goal_events(conn: sqlite3.Connection, day: date) -> list[str]:
+    """What happened to long-term goals on this day, for the model and the export."""
+    d = str(day)
+    events = []
+    for r in conn.execute("SELECT * FROM goals WHERE created_day = ? OR done_day = ? OR dropped_day = ? ORDER BY id",
+                          (d, d, d)):
+        if r["created_day"] == d:
+            events.append(f"added: {r['text']}")
+        if r["done_day"] == d:
+            events.append(f"achieved: {r['text']}")
+        if r["dropped_day"] == d:
+            events.append(f"dropped: {r['text']}")
+    return events
+
+
+def goals_dropped_on(conn: sqlite3.Connection, day: date) -> list[sqlite3.Row]:
+    return conn.execute("SELECT id, text FROM goals WHERE dropped_day = ? ORDER BY id", (str(day),)).fetchall()
+
+
+def add_goal(conn: sqlite3.Connection, day: date, text: str) -> None:
+    text = " ".join(text.split())
+    if not text:
+        return
+    with tx(conn):
+        conn.execute("INSERT INTO goals (text, created_day, created_at) VALUES (?, ?, ?)",
+                     (text, str(day), utc_now_iso()))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def toggle_goal(conn: sqlite3.Connection, goal_id: int, day: date) -> None:
+    with tx(conn):
+        row = conn.execute("SELECT done_day FROM goals WHERE id = ?", (goal_id,)).fetchone()
+        if row is None:
+            return
+        new_value = None if row["done_day"] == str(day) else str(day)
+        conn.execute("UPDATE goals SET done_day = ? WHERE id = ?", (new_value, goal_id))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def drop_goal(conn: sqlite3.Connection, goal_id: int, day: date) -> None:
+    with tx(conn):
+        conn.execute("UPDATE goals SET dropped_day = ? WHERE id = ? AND done_day IS NULL", (str(day), goal_id))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def undrop_goal(conn: sqlite3.Connection, goal_id: int, day: date) -> None:
+    with tx(conn):
+        conn.execute("UPDATE goals SET dropped_day = NULL WHERE id = ? AND dropped_day = ?", (goal_id, str(day)))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def edit_goal(conn: sqlite3.Connection, goal_id: int, day: date, text: str) -> None:
+    text = " ".join(text.split())
+    if not text:
+        return
+    with tx(conn):
+        conn.execute("UPDATE goals SET text = ? WHERE id = ?", (text, goal_id))
+        touch_entry(conn, ensure_entry(conn, day))
+
+
+def add_todo_for_goal(conn: sqlite3.Connection, day: date, goal_id: int, text: str) -> None:
+    """A step toward a goal, put on that day's list."""
+    text = " ".join(text.split())
+    if not text:
+        return
+    with tx(conn):
+        conn.execute(
+            "INSERT INTO todos (text, created_day, created_at, source_goal_id) VALUES (?, ?, ?, ?)",
+            (text, str(day), utc_now_iso(), goal_id),
+        )
+        touch_entry(conn, ensure_entry(conn, day))

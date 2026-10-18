@@ -45,10 +45,16 @@
   <section class="card section" id="s-{{ s.key }}">
     <h2>{{ s.label }}</h2>
 
-    {% if s.kind == 'todos' %}
+    {% if s.kind == 'goals' %}
+      <div id="goals">{% include "_goals.html" %}</div>
+      <form id="goal-add" class="todo-add" autocomplete="off">
+        <input type="text" name="text" placeholder="Add a long-term goal and press Enter" maxlength="500">
+      </form>
+
+    {% elif s.kind == 'todos' %}
       <div id="todos">{% include "_todos.html" %}</div>
       <form id="todo-add" class="todo-add" autocomplete="off">
-        <input type="text" name="text" placeholder="Add a todo and press Enter" maxlength="500">
+        <input type="text" name="text" placeholder="Add a goal for today and press Enter" maxlength="500">
       </form>
 
     {% elif s.kind == 'yesterday' %}
@@ -65,7 +71,7 @@
         {% endfor %}
       </ul>
       {% else %}
-      <p class="muted small">No todos were open yesterday.</p>
+      <p class="muted small">No goals were open yesterday.</p>
       {% endif %}
       <textarea data-section="{{ s.key }}" rows="2" placeholder="How did it go?">{{ contents.get(s.key, '') }}</textarea>
 

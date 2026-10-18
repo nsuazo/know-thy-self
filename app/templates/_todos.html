@@ -5,6 +5,9 @@
       <input type="checkbox" data-todo-toggle="{{ t.id }}" {{ 'checked' if t.done }}>
       <span class="todo-text">{{ t.text }}</span>
     </label>
+    {% if t.goal %}
+    <span class="badge badge-goal" title="A step toward: {{ t.goal }}">goal</span>
+    {% endif %}
     {% if t.from_review %}
     <a class="badge badge-panel" href="/review/{{ t.from_review }}" title="Suggested by a panel review">panel</a>
     {% endif %}

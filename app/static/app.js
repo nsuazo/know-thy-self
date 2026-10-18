@@ -198,6 +198,79 @@
     });
   }
 
+  // ---------- long-term goals ----------
+  const goals = document.getElementById("goals");
+  async function goalAction(url, body) {
+    try {
+      const res = await send("POST", url, body);
+      goals.innerHTML = await res.text();
+    } catch (_) {}
+  }
+  if (goals) {
+    goals.addEventListener("change", (e) => {
+      const id = e.target.dataset.goalToggle;
+      if (id) goalAction(`/api/day/${day}/goals/${id}/toggle`);
+    });
+    goals.addEventListener("click", (e) => {
+      const ds = e.target.dataset;
+      if (ds.goalDrop) goalAction(`/api/day/${day}/goals/${ds.goalDrop}/drop`);
+      else if (ds.goalUndrop) goalAction(`/api/day/${day}/goals/${ds.goalUndrop}/undrop`);
+      else if (ds.goalEdit) inlineInput(e.target.closest("li"), e.target.closest("li").querySelector(".todo-text").textContent,
+        (text) => goalAction(`/api/day/${day}/goals/${ds.goalEdit}/edit`, { text }));
+      else if (ds.goalStep) inlineInput(e.target.closest("li"), "",
+        async (text, restore) => {
+          restore();
+          try {
+            const res = await send("POST", `/api/day/${day}/goals/${ds.goalStep}/today`, { text });
+            if (todos) todos.innerHTML = await res.text();
+          } catch (_) {}
+        }, "A small step for today, then Enter");
+    });
+    const goalForm = document.getElementById("goal-add");
+    goalForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = goalForm.elements.text;
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      await goalAction(`/api/day/${day}/goals`, { text });
+      input.focus();
+    });
+  }
+
+  // Shared inline input for goals: Enter submits, Escape or clicking away restores the row.
+  function inlineInput(li, value, onSubmit, placeholder) {
+    if (!li || li.querySelector(".todo-edit")) return;
+    const label = li.querySelector("label");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "todo-edit";
+    input.maxLength = 500;
+    input.value = value;
+    if (placeholder) input.placeholder = placeholder;
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const cancel = () => {
+      if (done) return;
+      done = true;
+      if (input.isConnected) input.replaceWith(label);
+    };
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        done = true;
+        onSubmit(text, () => { if (input.isConnected) input.replaceWith(label); });
+      } else if (ev.key === "Escape") {
+        cancel();
+      }
+    });
+    input.addEventListener("blur", cancel);
+  }
+
   // ---------- history: manual export ----------
   const exportBtn = document.getElementById("export-btn");
   if (exportBtn) {

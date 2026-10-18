@@ -128,6 +128,9 @@ mark { background: #5c4a14; color: var(--text); border-radius: 3px; padding: 0 2
 .todo:hover .link-quiet, .todo .link-quiet:focus { visibility: visible; }
 .todo-edit { flex: 1; padding: 0.25rem 0.5rem; }
 .badge-panel { color: var(--accent); border-color: var(--accent-dim); }
+.badge-goal { color: var(--ok); border-color: #2c4a35; }
+.badge-done { color: var(--ok); border-color: #2c4a35; }
+.goal-since { white-space: nowrap; }
 .badge-panel:hover { text-decoration: none; color: var(--text); }
 .dropped-today { margin: 0 0 0.6rem; }
 .dropped-today span { white-space: nowrap; }

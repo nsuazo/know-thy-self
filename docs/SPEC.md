@@ -22,21 +22,20 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
   can change later without breaking old entries. Kinds: `text`, `todos`, `yesterday`. A prompt is
   retired with `active = 0`, never deleted; an entry that has an answer under a retired prompt still
   shows it (day page, export, history, LLM context).
-- Template v2 (migration 004), 14 prompts in four groups that can be collapsed on the day page:
-  - **Daily spine** (`core`): yesterday's autopsy (`yesterday`), realistic commitments (`todos`),
-    what I moved forward (`moved_forward`), grateful for (`grateful`, restored in migration 005),
-    mental RAM (`mental_ram`).
-  - **Next actions** (`todo_incubator`): first three tiny steps (`atomic_breakdown`), highest-leverage
-    next action (`next_action`), which bigger goal moved (`horizon`), overcomplication check
-    (`good_enough`).
-  - **People and stories** (`social_incubator`): story bank (`story_bank`), open loops about people
-    (`open_loops`), tomorrow's social prep (`social_prep`), the mirror (`mirror`).
-  - **Inner signal** (`psych`): attention leaks and the feeling behind them (`escape_hatch`), loudest
-    internal voice (`loud_voice`).
-  - The `category` and the section keys are stable handles that future tools (a social prep app, a task
-    decomposer) can query: `SELECT content FROM entry_sections WHERE section_key = 'story_bank'`.
-  - Retired in v2: random thoughts, work wins, personal wins, life advice, mental pattern,
-    putting off, noticed about another person.
+- Template v3 (migration 007), eight prompts in two groups:
+  - **Goals and today** (`core`): long-term goals (`long_goals`, kind `goals`), goals for today (`todos`),
+    did I finish yesterday's goals / what got in the way (`yesterday`), what I moved forward
+    (`moved_forward`), grateful (`grateful`), what's on my mind (`mental_ram`, reworded from "mental RAM").
+  - **Grab bag** (`grab_bag`): something worth talking about (`conversation`), dreams (`dreams`).
+  - Retired in v3: atomic breakdown, next action, horizon, good-enough check, story bank, open loops,
+    social prep, mirror, escape hatch, loudest voice. Retired in v2: random thoughts, work wins, personal
+    wins, life advice, mental pattern, putting off, noticed about another person. Gratitude came back in 005.
+  - Section keys are stable handles for future tools, e.g.
+    `SELECT content FROM entry_sections WHERE section_key = 'conversation'`.
+- **Long-term goals** (`goals` table: text, created_day, done_day, dropped_day): just a title, no dates, no
+  daily check-ins. Shown at the top of every day from the day they are added until achieved (checked, shown
+  on that day) or dropped (same-day undo). Edit in place. "+ today" puts a step toward a goal on that day's
+  list as a todo linked by `todos.source_goal_id` (shown with a "goal" badge).
 - Autosave on an 800ms debounce and on blur, one request at a time per section. Empty days are not
   created just by viewing.
 - Mood and energy (1–5, click again to clear) and free-form tags.
@@ -102,7 +101,12 @@ entries fall back to their weekly summaries.
 No flattery or filler; no reassurance the evidence doesn't support. Cite entries as
 `[YYYY-MM-DD]`. Mark claims resting on fewer than 3 data points as *thin evidence*. Name
 contradictions between stated values and behaviour. Challenge self-assessments that are inflated
-and ones that are too harsh. No clinical diagnoses.
+and ones that are too harsh. No clinical diagnoses. Long-term goals are for tracking: judged gently and
+only across weeks, never a day or week without progress. No scolding for empty days or skipped prompts.
+Dreams are for recurring themes and mood only, never evidence about the author.
+
+Long-term goals appear once as a `# LONG-TERM GOALS` layer (current goals plus those achieved or dropped
+in the last 90 days, right after the profile); each entry shows only that day's goal changes.
 
 ### Review panel (Phase 2)
 - Scope: today / 7d (default) / 30d / all. Perspective checkboxes, all on by default.

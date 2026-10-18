@@ -70,6 +70,8 @@ def day_page(request: Request, day_str: str, conn: sqlite3.Connection = Depends(
             "all_tags": repo.all_tags(conn),
             "todos": repo.todos_for_day(conn, day),
             "dropped": repo.todos_dropped_on(conn, day),
+            "goals": repo.goals_for_day(conn, day),
+            "dropped_goals": repo.goals_dropped_on(conn, day),
             "yesterday": repo.yesterday_report(conn, day),
             "qcard": day_card(conn) if day == today else None,
         },
@@ -80,7 +82,7 @@ def day_page(request: Request, day_str: str, conn: sqlite3.Connection = Depends(
 def save_section(day_str: str, key: str, body: SectionIn, conn: sqlite3.Connection = Depends(get_db)):
     day = _check_day(day_str)
     section = repo.section_by_key(conn, key)
-    if section is None or section["kind"] == "todos":
+    if section is None or section["kind"] in ("todos", "goals"):
         raise HTTPException(status_code=404, detail="Unknown section")
     repo.save_section(conn, day, key, body.content)
     return {"ok": True}
@@ -139,4 +141,56 @@ def edit_todo(request: Request, day_str: str, todo_id: int, body: TodoIn, conn: 
 def undrop_todo(request: Request, day_str: str, todo_id: int, conn: sqlite3.Connection = Depends(get_db)):
     day = _check_day(day_str)
     repo.undrop_todo(conn, todo_id, day)
+    return _todos_partial(request, conn, day)
+
+
+# ---------- long-term goals ----------
+
+def _goals_partial(request: Request, conn: sqlite3.Connection, day):
+    return templates.TemplateResponse(
+        request, "_goals.html",
+        {"day": day, "goals": repo.goals_for_day(conn, day), "dropped_goals": repo.goals_dropped_on(conn, day)},
+    )
+
+
+@router.post("/api/day/{day_str}/goals", response_class=HTMLResponse)
+def add_goal(request: Request, day_str: str, body: TodoIn, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.add_goal(conn, day, body.text)
+    return _goals_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/goals/{goal_id}/toggle", response_class=HTMLResponse)
+def toggle_goal(request: Request, day_str: str, goal_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.toggle_goal(conn, goal_id, day)
+    return _goals_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/goals/{goal_id}/drop", response_class=HTMLResponse)
+def drop_goal(request: Request, day_str: str, goal_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.drop_goal(conn, goal_id, day)
+    return _goals_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/goals/{goal_id}/undrop", response_class=HTMLResponse)
+def undrop_goal(request: Request, day_str: str, goal_id: int, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.undrop_goal(conn, goal_id, day)
+    return _goals_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/goals/{goal_id}/edit", response_class=HTMLResponse)
+def edit_goal(request: Request, day_str: str, goal_id: int, body: TodoIn, conn: sqlite3.Connection = Depends(get_db)):
+    day = _check_day(day_str)
+    repo.edit_goal(conn, goal_id, day, body.text)
+    return _goals_partial(request, conn, day)
+
+
+@router.post("/api/day/{day_str}/goals/{goal_id}/today", response_class=HTMLResponse)
+def goal_step_today(request: Request, day_str: str, goal_id: int, body: TodoIn, conn: sqlite3.Connection = Depends(get_db)):
+    """Add a step toward a long-term goal to this day's list; returns the refreshed todo list."""
+    day = _check_day(day_str)
+    repo.add_todo_for_goal(conn, day, goal_id, body.text)
     return _todos_partial(request, conn, day)

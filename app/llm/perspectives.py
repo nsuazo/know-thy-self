@@ -94,24 +94,22 @@ PERSPECTIVES: list[Perspective] = [
     Perspective(
         "systems",
         "Systems Architect",
-        "Behavioral engineering and executive-function mechanics (Fogg's Tiny Habits, Allen's GTD, "
-        "Newport, Barkley on self-regulation). Set aside deep emotional motives and look strictly "
-        "at activation energy, task granularity, working-memory bottlenecks, environment design "
-        "and productive procrastination (building tools or systems instead of doing the work). "
-        "Point out when a carried-over todo is really an undecomposed project in disguise, judge "
-        "whether the 'first three small steps' and 'next action' answers are actually small and "
-        "physical enough to start, and check whether what the author says they do on high-energy "
-        "days matches their 1-5 energy data.",
+        "Behavioral engineering and executive-function mechanics (Fogg's Tiny Habits, Allen's GTD, Newport, "
+        "Barkley on self-regulation). Set aside deep emotional motives and look strictly at activation energy, task "
+        "size, working-memory bottlenecks, environment design and productive procrastination (building tools or "
+        "systems instead of doing the work). Point out when a carried-over todo is really an undecomposed project, "
+        "whether the day's goals are sized to actually get done, and whether steps toward long-term goals are "
+        "concrete enough to start. Judge long-term goals by their momentum over weeks, never by a single day, and "
+        "check whether what the author gets done tracks their 1-5 energy data.",
     ),
     Perspective(
         "social",
         "Social Coach",
-        "Interpersonal dynamics, active curiosity and social mechanics (Goffman on self-presentation, "
-        "Carnegie, Voss on tactical empathy, Adler). Look at how the author prepares for, takes part "
-        "in and reflects on interactions. Is the author curious about other people's worlds, or "
-        "mostly monitoring themselves? Critique the quality of the conversation prep, the stories "
-        "banked for telling, and the follow-through on the open loops they log about other "
-        "people. Say whether observations about others are turning into actual contact.",
+        "Interpersonal dynamics, curiosity and social mechanics (Goffman on self-presentation, Carnegie, Voss on "
+        "tactical empathy, Adler). Look at how the author shows up with other people and at the topics they note as "
+        "worth talking about. Are they curious about other people's worlds, or mostly monitoring themselves? Are "
+        "the topics they collect turning into actual conversations and closer ties, or staying in the journal? "
+        "Where people appear in the entries, what does the author's reaction to them reveal?",
     ),
 ]
 

@@ -31,12 +31,18 @@ def entry_markdown(conn: sqlite3.Connection, entry: sqlite3.Row) -> str:
     parts = ["\n".join(fm), f"# {long_date(day)}"]
     for s in repo.sections_for_entry(conn, entry["id"]):
         body = ""
-        if s["kind"] == "todos":
+        if s["kind"] == "goals":
+            lines = [f"- [{'x' if g['done'] else ' '}] {g['text']}" + (" _(achieved)_" if g["done"] else "")
+                     for g in repo.goals_for_day(conn, day)]
+            body = "\n".join(lines)
+        elif s["kind"] == "todos":
             lines = []
             for t in _todos_visible(conn, day):
                 suffix = f" _(carried {t['carried_days']}d)_" if t["carried_days"] > 0 else ""
                 if t["from_review"]:
                     suffix += " _(from a review)_"
+                if t["goal"]:
+                    suffix += f" _(toward: {t['goal']})_"
                 lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{suffix}")
             body = "\n".join(lines)
         elif s["kind"] == "yesterday":

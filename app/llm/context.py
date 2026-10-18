@@ -1,6 +1,7 @@
 """Builds prompts in a fixed layer order so the server's prefix cache keeps hitting:
 
-    system prompt -> # PROFILE -> # EARLIER PERIODS (summaries) -> # JOURNAL ENTRIES -> # TASK (last)
+    system prompt -> # PROFILE -> # LONG-TERM GOALS -> # EARLIER PERIODS (summaries) -> # QUESTION ANSWERS
+    -> # JOURNAL ENTRIES -> # TASK (last)
 
 Recent weeks go in verbatim. Older weeks appear as weekly summaries, much older months as monthly
 summaries. When the result is over budget, the oldest verbatim weeks that have a summary are
@@ -74,14 +75,20 @@ def render_entry(conn: sqlite3.Connection, entry: sqlite3.Row, sections: list[sq
     for s in sections:
         label = s["label"]
         head = label if label.rstrip().endswith(("?", ":", ".")) else label + ":"
-        if s["kind"] == "todos":
+        if s["kind"] == "goals":
+            # Only what changed that day; the current list is given once under # LONG-TERM GOALS.
+            events = repo.goal_events(conn, day)
+            if events:
+                blocks.append(f"**{head}**\n" + "\n".join(f"- {e}" for e in events))
+        elif s["kind"] == "todos":
             todos = repo.todos_for_day(conn, day)
             if todos:
                 lines = []
                 for t in todos:
                     carried = f" (carried {t['carried_days']}d)" if t["carried_days"] > 0 else ""
                     panel = " (suggested by a panel review)" if t["from_review"] else ""
-                    lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{carried}{panel}")
+                    goal = f" (step toward goal: {t['goal']})" if t["goal"] else ""
+                    lines.append(f"- [{'x' if t['done'] else ' '}] {t['text']}{carried}{goal}{panel}")
                 blocks.append(f"**{head}**\n" + "\n".join(lines))
         elif s["kind"] == "yesterday":
             parts: list[str] = []
@@ -232,10 +239,27 @@ def render_answers(rows: list) -> str:
     return "\n\n".join(blocks)
 
 
-def assemble(profile_text: str | None, units: list[Unit], answers_text: str | None = None) -> str:
+GOALS_RECENT_DAYS = 90
+
+
+def render_goals(conn: sqlite3.Connection, today: date) -> str:
+    """Current long-term goals, plus ones achieved or dropped in the last 90 days."""
+    lines = [f"- {g['text']} (tracking since {g['created_day']})" for g in repo.active_goals(conn, today)]
+    since = str(today - timedelta(days=GOALS_RECENT_DAYS))
+    for g in conn.execute("SELECT * FROM goals WHERE done_day >= ? ORDER BY done_day", (since,)):
+        lines.append(f"- {g['text']} (achieved {g['done_day']})")
+    for g in conn.execute("SELECT * FROM goals WHERE dropped_day >= ? ORDER BY dropped_day", (since,)):
+        lines.append(f"- {g['text']} (dropped {g['dropped_day']})")
+    return "\n".join(lines)
+
+
+def assemble(profile_text: str | None, units: list[Unit], answers_text: str | None = None,
+             goals_text: str | None = None) -> str:
     parts: list[str] = []
     if profile_text:
         parts.append("# PROFILE\n\n" + profile_text.strip())
+    if goals_text:
+        parts.append("# LONG-TERM GOALS\n\n" + goals_text)
     summaries = [u.text for u in units if u.kind != "verbatim"]
     if summaries:
         parts.append("# EARLIER PERIODS\n\n" + "\n\n".join(summaries))
@@ -260,10 +284,11 @@ def _build(
     answers_text: str | None = None,
 ) -> tuple[str, list[Unit], int, int, int, int]:
     units = build_units(conn, verbatim_start=verbatim_start, end=end, today=today, include_before=include_before)
+    goals_text = render_goals(conn, today) or None
     fixed = (len(SYSTEM_PROMPT) + OVERHEAD_CHARS + (len(profile_text) + 20 if profile_text else 0)
-             + (len(answers_text) + 30 if answers_text else 0))
+             + (len(answers_text) + 30 if answers_text else 0) + (len(goals_text) + 30 if goals_text else 0))
     units, omitted, summaries_dropped = fit(units, settings.context_budget_tokens * 4, fixed)
-    body = assemble(profile_text, units, answers_text)
+    body = assemble(profile_text, units, answers_text, goals_text)
     est_tokens = (len(SYSTEM_PROMPT) + OVERHEAD_CHARS + len(body)) // 4
     return body, units, omitted, summaries_dropped, sum(1 for u in units if u.kind != "verbatim"), est_tokens
 

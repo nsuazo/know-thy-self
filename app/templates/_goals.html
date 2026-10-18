@@ -1,0 +1,23 @@
+<ul class="todo-list goal-list">
+  {% for g in goals %}
+  <li class="todo goal {{ 'done' if g.done }}">
+    <label>
+      <input type="checkbox" data-goal-toggle="{{ g.id }}" {{ 'checked' if g.done }} title="Mark as achieved">
+      <span class="todo-text">{{ g.text }}</span>
+    </label>
+    {% if g.done %}<span class="badge badge-done">achieved</span>{% else %}
+    <span class="muted small goal-since" title="Added {{ g.created_day }}">since {{ g.created_day | short_date }}</span>
+    <button type="button" class="link-btn link-quiet" data-goal-step="{{ g.id }}" title="Put a step toward this goal on today's list">+ today</button>
+    {% endif %}
+    <button type="button" class="link-btn link-quiet" data-goal-edit="{{ g.id }}" title="Edit the wording">edit</button>
+    {% if not g.done %}<button type="button" class="link-btn" data-goal-drop="{{ g.id }}" title="Stop tracking this goal">drop</button>{% endif %}
+  </li>
+  {% else %}
+  <li class="empty">No long-term goals yet. Add the things you want to keep in view; nothing here is checked daily.</li>
+  {% endfor %}
+</ul>
+{% if dropped_goals %}
+<p class="dropped-today muted small">Dropped today:
+  {% for d in dropped_goals %}<span>{{ d.text }} <button type="button" class="link-btn link-quiet" data-goal-undrop="{{ d.id }}">undo</button></span>{% if not loop.last %} · {% endif %}{% endfor %}
+</p>
+{% endif %}
