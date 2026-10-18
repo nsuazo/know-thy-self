@@ -8,12 +8,14 @@
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/review.css">
   <link rel="stylesheet" href="/static/profile.css">
+  <link rel="stylesheet" href="/static/questions.css">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="/">Know Thy Self</a>
     <nav>
       <a href="/" class="{{ 'active' if nav == 'journal' }}">Journal</a>
+      <a href="/questions" class="{{ 'active' if nav == 'questions' }}">Questions <span id="q-badge" class="nav-count" hidden></span></a>
       <a href="/review" class="{{ 'active' if nav == 'review' }}">Review</a>
       <a href="/profile" class="{{ 'active' if nav == 'profile' }}">Profile</a>
       <a href="/history" class="{{ 'active' if nav == 'history' }}">History</a>
@@ -26,6 +28,7 @@
   <script src="/static/app.js"></script>
   <script src="/static/groups.js"></script>
   <script src="/static/llm.js"></script>
+  <script src="/static/questions.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

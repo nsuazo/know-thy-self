@@ -1,6 +1,6 @@
 """Background LLM jobs. Status and progress live in the llm_jobs table; the UI polls it.
 
-Kinds: review, catch_up (weekly/monthly summaries), profile.
+Kinds: review, catch_up (weekly/monthly summaries), profile, questions, followup.
 """
 import asyncio
 import json
@@ -10,7 +10,7 @@ import sqlite3
 from .config import settings
 from .days import utc_now_iso
 from .db import connect
-from .llm import client, summarize
+from .llm import client, questions, summarize
 from .llm.actions import split_actions
 from .llm.client import LLMError
 from .llm.context import build_review_context
@@ -82,6 +82,10 @@ def next_url(kind: str, result_id: int | None) -> str:
         return f"/profile/{result_id}"
     if kind == "catch_up":
         return "/summaries"
+    if kind == "questions":
+        return "/questions"
+    if kind == "followup" and result_id:
+        return f"/questions?q={result_id}"
     return "/"
 
 
@@ -116,6 +120,11 @@ async def _run(job_id: int) -> None:
                 result_id = None
             elif kind == "profile":
                 result_id = await summarize.update_profile(conn)
+            elif kind == "questions":
+                await questions.generate_batch(conn, params.get("category"))
+                result_id = None
+            elif kind == "followup":
+                result_id = await questions.generate_followup(conn, int(params["question_id"]))
             else:
                 raise LLMError(f"Unknown job kind: {kind}")
         except LLMError as exc:

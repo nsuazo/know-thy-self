@@ -106,15 +106,17 @@ async def catch_up(conn: sqlite3.Connection, progress: Progress, today: date | N
 
 async def update_profile(conn: sqlite3.Connection, today: date | None = None) -> int:
     ctx = build_profile_context(conn, today)
-    log.info("Profile v%d: %s to %s, %d entries, %d summaries, ~%d tokens",
-             ctx.version, ctx.start, ctx.end, ctx.entries_included, ctx.summaries_used, ctx.est_tokens)
+    log.info("Profile v%d: %s to %s, %d entries, %d summaries, %d answers, ~%d tokens",
+             ctx.version, ctx.start, ctx.end, ctx.entries_included, ctx.summaries_used, ctx.answers_included,
+             ctx.est_tokens)
     # Analytical synthesis: use the server's configured thinking mode, not the summary override.
     result = await client.chat(ctx.messages, temperature=0.3)
     cur = conn.execute(
         "INSERT INTO profile_versions (version, content, covers_from, covers_through, entries_count, "
-        "summaries_used, model, prompt_tokens, completion_tokens, seconds, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "summaries_used, answers_through, model, prompt_tokens, completion_tokens, seconds, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (ctx.version, result.content, str(ctx.start), str(ctx.end), ctx.entries_included, ctx.summaries_used,
+         ctx.answers_through,
          settings.llm_model, result.prompt_tokens, result.completion_tokens, round(result.seconds, 1),
          utc_now_iso()),
     )

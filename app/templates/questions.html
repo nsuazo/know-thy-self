@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Questions · Know Thy Self{% endblock %}
+{% block content %}
+<div class="review-page questions-page">
+  <h1 class="page-title">Questions</h1>
+  <p class="muted">Direct questions, one at a time, to build your profile and personal history. Your answers feed the profile and later reviews as self-report, weighed against what your journal shows.</p>
+
+  {% if current %}
+  {% set q = current.q %}
+  <section class="card q-focus">
+    <div class="q-meta muted small">
+      <span>Question {{ position }} of {{ waiting_count }} waiting</span>
+      <span class="badge">{{ current.category }}</span>
+      {% if q.source == 'seed' %}<span class="badge">starter</span>{% elif q.source == 'followup' %}<span class="badge badge-panel">follow-up</span>{% else %}<span class="badge badge-panel">from the model</span>{% endif %}
+      {% if q.recurring_days %}<span class="badge" title="Asked again every {{ q.recurring_days }} days">every {{ q.recurring_days }} days</span>{% endif %}
+    </div>
+    {% if parent %}<p class="muted small">Follow-up to <a href="/questions/{{ parent.id }}">{{ parent.text }}</a></p>{% endif %}
+    <h2 class="q-question">{{ q.text }}</h2>
+    {% if q.why %}<div class="q-why muted small">{{ q.why | review_md }}</div>{% endif %}
+    {% if has_history %}<p class="muted small">You've answered this before. Your earlier answers show after you answer, so they can't anchor you.</p>{% endif %}
+
+    {% with w = current, mode = 'redirect' %}{% include "_question_widget.html" %}{% endwith %}
+
+    <div class="q-skip" data-qid="{{ q.id }}">
+      <button type="button" class="link-btn link-quiet" data-skip="later" title="Back in 30 days">Later</button>
+      <button type="button" class="link-btn link-quiet" data-skip="never">Never ask this</button>
+      <button type="button" class="link-btn link-quiet" data-skip="bad">Bad question…</button>
+      <span class="q-bad-form" hidden>
+        <input type="text" class="q-bad-reason" maxlength="500" placeholder="What's wrong with it? (optional, teaches the generator)">
+        <button type="button" class="btn" data-skip="bad-confirm">Mark as bad</button>
+      </span>
+    </div>
+  </section>
+  {% else %}
+  <section class="card empty-card">
+    <p>Nothing waiting right now. {% if has_profile %}Get a new batch below.{% else %}Get a batch below; the model writes from your entries until you have a profile, and from both after.{% endif %}</p>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="run-row">
+      <button type="button" class="btn" data-job-lock data-job-endpoint="/api/questions/generate" data-job-param="#q-category">Get new questions</button>
+      <select id="q-category" name="category" data-job-lock>
+        <option value="">Any category (thinnest first)</option>
+        {% for key, label in categories.items() %}{% if key not in muted %}<option value="{{ key }}">Focus on: {{ label }}</option>{% endif %}{% endfor %}
+      </select>
+    </div>
+    <p class="muted small">Five at a time, aimed at gaps in your profile, contradictions in your entries, and parts of your life the journal hasn't touched.{% if has_profile %} When fewer than three of the model's questions are waiting, a new batch is made automatically whenever the LLM is online.{% endif %}</p>
+    {% include "_job_ui.html" %}
+  </section>
+
+  <details class="card q-settings">
+    <summary>What the questions are for</summary>
+    <p class="muted small">Every batch is written against this. Change it whenever your aims change.</p>
+    <textarea id="q-focus" rows="4">{{ focus }}</textarea>
+    <p class="muted small">Muted categories are never asked:</p>
+    <div class="choices" id="q-muted">
+      {% for key, label in categories.items() %}
+      <label class="choice"><input type="checkbox" value="{{ key }}" {{ 'checked' if key in muted }}> {{ label }}</label>
+      {% endfor %}
+    </div>
+    <div class="q-actions"><button type="button" class="btn" id="q-settings-save">Save</button><span class="q-status muted small" id="q-settings-status"></span></div>
+  </details>
+
+  <h2 class="section-title">Answered</h2>
+  <ul class="entry-list">
+    {% for a in answered %}
+    <li class="card entry-row">
+      <div class="entry-row-head">
+        <a href="/questions/{{ a.id }}">{{ a.text }}</a>
+      </div>
+      <span class="muted small">{{ categories.get(a.category, a.category) }} · {{ a.last_day | short_date }}{% if a.n_answers > 1 %} · {{ a.n_answers }} answers{% endif %}</span>
+    </li>
+    {% else %}
+    <li class="empty">Nothing answered yet.</li>
+    {% endfor %}
+  </ul>
+
+  {% if skipped %}
+  <details class="q-skipped">
+    <summary class="section-title">Skipped ({{ skipped | length }})</summary>
+    <ul class="entry-list">
+      {% for s in skipped %}
+      <li class="entry-row">
+        <span>{{ s.text }}</span>
+        <span class="muted small">
+          {% if s.status == 'never' %}never ask{% elif s.status == 'bad' %}bad question{% if s.bad_reason %}: {{ s.bad_reason }}{% endif %}{% else %}later, back {{ s.available_from }}{% endif %}
+        </span>
+        <button type="button" class="link-btn link-quiet" data-restore="{{ s.id }}">ask now</button>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

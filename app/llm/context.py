@@ -6,11 +6,12 @@ Recent weeks go in verbatim. Older weeks appear as weekly summaries, much older 
 summaries. When the result is over budget, the oldest verbatim weeks that have a summary are
 swapped for it first; only then are the oldest pieces dropped.
 """
+import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from .. import periods, repo
+from .. import periods, qrepo, repo
 from ..config import settings
 from ..days import logical_today
 from .client import LLMError
@@ -210,18 +211,41 @@ def fit(units: list[Unit], budget_chars: int, fixed_chars: int) -> tuple[list[Un
     return units, entries_omitted, summaries_dropped
 
 
-def assemble(profile_text: str | None, units: list[Unit]) -> str:
+def render_answers(rows: list) -> str:
+    """Answers grouped by question (in the order first answered), cited as [Q12, 2026-10-15]."""
+    by_q: dict[int, list] = {}
+    for r in rows:
+        by_q.setdefault(r["question_id"], []).append(r)
+    blocks = []
+    for qid, answers in by_q.items():
+        first = answers[0]
+        lines = [f"### Q{qid} ({qrepo.CATEGORIES.get(first['category'], first['category'])})",
+                 f"Question: {first['q_text']}"]
+        if first["claim"]:
+            lines.append(f'Profile claim being checked: "{first["claim"]}"')
+        for a in answers:
+            structured = qrepo.describe_value(first["kind"], qrepo.options_of(first), qrepo.value_of(a))
+            text = a["text"].strip()
+            body = " | ".join(x for x in (structured, text) if x) or "(no text)"
+            lines.append(f"Answer [Q{qid}, {a['day']}]: {body}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def assemble(profile_text: str | None, units: list[Unit], answers_text: str | None = None) -> str:
     parts: list[str] = []
     if profile_text:
         parts.append("# PROFILE\n\n" + profile_text.strip())
     summaries = [u.text for u in units if u.kind != "verbatim"]
     if summaries:
         parts.append("# EARLIER PERIODS\n\n" + "\n\n".join(summaries))
+    if answers_text:
+        parts.append("# QUESTION ANSWERS\n\n" + answers_text)
     verbatim = [u.text for u in units if u.kind == "verbatim"]
     if verbatim:
         parts.append("# JOURNAL ENTRIES\n\n" + "\n\n".join(verbatim))
     else:
-        parts.append("# JOURNAL ENTRIES\n\n(No entries are included verbatim; see the summaries above.)")
+        parts.append("# JOURNAL ENTRIES\n\n(No entries are included verbatim; see the material above.)")
     return "\n\n".join(parts)
 
 
@@ -233,13 +257,45 @@ def _build(
     end: date,
     today: date,
     include_before: bool,
+    answers_text: str | None = None,
 ) -> tuple[str, list[Unit], int, int, int, int]:
     units = build_units(conn, verbatim_start=verbatim_start, end=end, today=today, include_before=include_before)
-    fixed = len(SYSTEM_PROMPT) + OVERHEAD_CHARS + (len(profile_text) + 20 if profile_text else 0)
+    fixed = (len(SYSTEM_PROMPT) + OVERHEAD_CHARS + (len(profile_text) + 20 if profile_text else 0)
+             + (len(answers_text) + 30 if answers_text else 0))
     units, omitted, summaries_dropped = fit(units, settings.context_budget_tokens * 4, fixed)
-    body = assemble(profile_text, units)
+    body = assemble(profile_text, units, answers_text)
     est_tokens = (len(SYSTEM_PROMPT) + OVERHEAD_CHARS + len(body)) // 4
     return body, units, omitted, summaries_dropped, sum(1 for u in units if u.kind != "verbatim"), est_tokens
+
+
+# ---------- answers chosen for each kind of prompt ----------
+
+ANSWERS_MAX_CHARS = 40_000   # answers are compact; this only bites after years of use
+REVIEW_ANSWER_DAYS = 30
+_Q_CITE = re.compile(r"\[Q(\d+)")
+
+
+def _cap(rows: list) -> list:
+    """Keep the newest answers that fit the cap (rows are oldest first)."""
+    total, kept = 0, []
+    for r in reversed(rows):
+        total += len(r["text"]) + len(r["q_text"]) + 80
+        if total > ANSWERS_MAX_CHARS:
+            break
+        kept.append(r)
+    return list(reversed(kept))
+
+
+def review_answers(conn: sqlite3.Connection, today: date, profile_text: str | None) -> list:
+    """The last 30 days of answers, plus any older answer the current profile cites."""
+    cited = sorted({int(m) for m in _Q_CITE.findall(profile_text or "")})
+    since = str(today - timedelta(days=REVIEW_ANSWER_DAYS - 1))
+    if cited:
+        marks = ",".join("?" * len(cited))
+        rows = qrepo.answer_rows(conn, f"a.day >= ? OR a.question_id IN ({marks})", (since, *cited))
+    else:
+        rows = qrepo.answer_rows(conn, "a.day >= ?", (since,))
+    return _cap(rows)
 
 
 # ---------- public builders ----------
@@ -263,13 +319,16 @@ def build_review_context(
     # Whole weeks, so no day falls between the summaries and the verbatim part.
     verbatim_start = periods.monday_of(min(start, today - timedelta(days=settings.context_min_days - 1)))
     latest = repo.latest_profile(conn)
+    profile_text = latest["content"] if latest else None
+    answers = review_answers(conn, today, profile_text)
     body, units, omitted, summaries_dropped, summaries_used, est_tokens = _build(
         conn,
-        profile_text=latest["content"] if latest else None,
+        profile_text=profile_text,
         verbatim_start=verbatim_start,
         end=end,
         today=today,
         include_before=True,
+        answers_text=render_answers(answers) or None,
     )
     entries_included = sum(u.entries for u in units if u.kind == "verbatim")
     focus_start = max(start, date.fromisoformat(units[0].sort)) if units else start
@@ -299,33 +358,48 @@ class ProfileContext:
     entries_included: int
     summaries_used: int
     est_tokens: int
+    answers_included: int = 0
+    answers_through: int = 0
 
 
 def build_profile_context(conn: sqlite3.Connection, today: date | None = None) -> ProfileContext:
-    """Everything since the last profile (or all history for the first one), through yesterday."""
+    """Everything since the last profile (or all history for the first one): entries through
+    yesterday, plus every answer to a direct question that the last profile has not read yet."""
     today = today or logical_today()
-    end = today - timedelta(days=1)
+    yesterday = today - timedelta(days=1)
     latest = repo.latest_profile(conn)
     if latest:
         start = date.fromisoformat(latest["covers_through"]) + timedelta(days=1)
+        answers_after = latest["answers_through"] or 0
     else:
         first = conn.execute(
             f"SELECT MIN(e.day) FROM entries e WHERE {periods.CONTENT_SQL}"
         ).fetchone()[0]
-        if first is None:
-            raise LLMError("There are no journal entries yet to build a profile from.")
-        start = date.fromisoformat(first)
-    if start > end or not periods.content_entries(conn, start, end):
-        raise LLMError("There are no new journal entries since the last profile update.")
+        start = date.fromisoformat(first) if first else yesterday
+        answers_after = 0
+    has_entries = start <= yesterday and bool(periods.content_entries(conn, start, yesterday))
+    answers = qrepo.answer_rows(conn, "a.id > ?", (answers_after,))
+    if not has_entries and not answers:
+        if latest:
+            raise LLMError("There is nothing new since the last profile update: no new entries before today "
+                           "and no new answers to questions.")
+        raise LLMError("There are no journal entries or answers yet to build a profile from.")
 
+    if has_entries:
+        end = yesterday
+    else:
+        # Answers only: the entry range stays where the last version left it.
+        start = end = date.fromisoformat(latest["covers_through"]) if latest else yesterday
+    answers = _cap(answers)
     version = (latest["version"] + 1) if latest else 1
     body, units, _, _, summaries_used, est_tokens = _build(
         conn,
         profile_text=latest["content"] if latest else None,
-        verbatim_start=start,
+        verbatim_start=start if has_entries else end + timedelta(days=1),  # empty range: no entries re-read
         end=end,
         today=today,
         include_before=False,
+        answers_text=render_answers(answers) or None,
     )
     entries_included = sum(u.entries for u in units if u.kind == "verbatim")
     task = profile_task(
@@ -336,9 +410,13 @@ def build_profile_context(conn: sqlite3.Connection, today: date | None = None) -
         end=end,
         entries_included=entries_included,
         summaries_used=summaries_used,
+        answers_included=len(answers),
+        has_entries=has_entries,
     )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": body + "\n\n---\n\n" + task},
     ]
-    return ProfileContext(messages, version, start, end, entries_included, summaries_used, est_tokens)
+    through = max((a["id"] for a in answers), default=answers_after)
+    return ProfileContext(messages, version, start, end, entries_included, summaries_used, est_tokens,
+                          len(answers), through)

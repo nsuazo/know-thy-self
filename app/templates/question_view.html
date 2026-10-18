@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Question · Know Thy Self{% endblock %}
+{% block content %}
+{% set q = qv.q %}
+<div class="review-page questions-page">
+  <div class="review-head">
+    <a class="muted small" href="/questions">&larr; Questions{% if waiting_count %} ({{ waiting_count }} waiting){% endif %}</a>
+    <div class="q-meta muted small">
+      <span class="badge">{{ qv.category }}</span>
+      {% if q.source == 'seed' %}<span class="badge">starter</span>{% elif q.source == 'followup' %}<span class="badge badge-panel">follow-up</span>{% else %}<span class="badge badge-panel">from the model</span>{% endif %}
+      {% if q.recurring_days %}<span class="badge">every {{ q.recurring_days }} days</span>{% endif %}
+      <span>Q{{ q.id }}</span>
+    </div>
+    {% if parent %}<p class="muted small">Follow-up to <a href="/questions/{{ parent.id }}">{{ parent.text }}</a></p>{% endif %}
+    <h1 class="q-question">{{ q.text }}</h1>
+    {% if q.why %}<div class="q-why muted small">{{ q.why | review_md }}</div>{% endif %}
+    {% if q.kind == 'claim_check' and q.claim and not in_queue %}<blockquote class="q-claim">{{ q.claim }}</blockquote>{% endif %}
+  </div>
+
+  {% if saved %}<p class="flash">Saved.</p>{% endif %}
+
+  {% if in_queue %}
+  <section class="card q-focus">
+    {% if answers %}<p class="muted small">You've answered this before. Your earlier answers show after you answer.</p>{% endif %}
+    {% with w = qv, mode = 'redirect' %}{% include "_question_widget.html" %}{% endwith %}
+  </section>
+  {% else %}
+  <section class="q-answers">
+    {% for a in answers %}
+    <article class="card q-answer" id="a{{ a.row.id }}">
+      <div class="q-answer-head muted small">
+        <span>{{ a.row.day | long_date }}</span>
+        <button type="button" class="link-btn link-quiet" data-edit-answer="{{ a.row.id }}">edit</button>
+      </div>
+      <div class="q-answer-view">
+        {% if a.structured %}<p class="q-structured">{{ a.structured }}</p>{% endif %}
+        {% if a.row.text %}<div class="q-answer-text">{{ a.row.text }}</div>{% endif %}
+      </div>
+      <div class="q-answer-edit" hidden>
+        {% with w = a.vm, mode = 'edit' %}{% include "_question_widget.html" %}{% endwith %}
+      </div>
+    </article>
+    {% else %}
+    <p class="muted">Not answered{% if q.status == 'never' %}; marked "never ask"{% elif q.status == 'bad' %}; marked as a bad question{% elif q.available_from and q.available_from > today|string %}; back in the queue on {{ q.available_from }}{% endif %}.
+      <button type="button" class="link-btn link-quiet" data-restore="{{ q.id }}">ask now</button></p>
+    {% endfor %}
+  </section>
+
+  {% if answers %}
+  <section class="card">
+    <div class="run-row">
+      <button type="button" class="btn" data-job-lock data-job-endpoint="/api/questions/{{ q.id }}/followup">Dig deeper</button>
+      {% if waiting_count %}<a class="btn btn-primary" href="/questions">Next question &rarr;</a>{% endif %}
+    </div>
+    <p class="muted small">Dig deeper asks the model for one sharper question about what you just wrote.</p>
+    {% include "_job_ui.html" %}
+  </section>
+  {% endif %}
+  {% endif %}
+
+  {% if followups %}
+  <h2 class="section-title">Follow-ups</h2>
+  <ul class="entry-list">
+    {% for f in followups %}
+    <li class="card entry-row"><a href="/questions/{{ f.id }}">{{ f.text }}</a>
+      <span class="muted small">{{ 'answered' if f.status == 'answered' else ('waiting' if f.status == 'waiting' else f.status) }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endblock %}

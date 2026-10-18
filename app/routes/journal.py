@@ -10,6 +10,7 @@ from .. import repo
 from ..db import get_db
 from ..days import logical_today, parse_day
 from ..web import templates
+from .questions import day_card
 
 router = APIRouter()
 
@@ -70,6 +71,7 @@ def day_page(request: Request, day_str: str, conn: sqlite3.Connection = Depends(
             "todos": repo.todos_for_day(conn, day),
             "dropped": repo.todos_dropped_on(conn, day),
             "yesterday": repo.yesterday_report(conn, day),
+            "qcard": day_card(conn) if day == today else None,
         },
     )
 

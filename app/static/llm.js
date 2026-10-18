@@ -163,7 +163,10 @@
 
   // Buttons that start a job at a fixed endpoint (profile, summaries)
   document.querySelectorAll("[data-job-endpoint]").forEach((btn) => {
-    btn.addEventListener("click", () => run(() => post(btn.dataset.jobEndpoint)));
+    btn.addEventListener("click", () => {
+      const field = btn.dataset.jobParam ? document.querySelector(btn.dataset.jobParam) : null;
+      run(() => post(btn.dataset.jobEndpoint, field ? { [field.name]: field.value || null } : undefined));
+    });
   });
 
   retryBtn.addEventListener("click", () => lastStart && run(lastStart));

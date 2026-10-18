@@ -3,12 +3,12 @@
 {% block content %}
 <div class="review-page">
   <h1 class="page-title">Profile</h1>
-  <p class="muted">A working picture of you, built by the model from your entries and kept as read-only versions. Treat it as a set of hypotheses with evidence, not a verdict. Each update reads only what is new since the last one.</p>
+  <p class="muted">A working picture of you, built by the model from your entries and your answers to questions, and kept as read-only versions. Treat it as a set of hypotheses with evidence, not a verdict. Each update reads only what is new since the last one.</p>
 
   {% if banner.suggest %}
   <div class="banner">
-    {% if banner.first %}You have {{ banner.new_days }} days of entries. That is enough to build a first profile.
-    {% else %}{{ banner.new_days }} new days of entries since the last update.{% endif %}
+    {% if banner.first %}You have {{ banner.new_days }} days of entries{% if banner.new_answers %} and {{ banner.new_answers }} answered questions{% endif %}. That is enough to build a first profile.
+    {% else %}{{ banner.new_days }} new days of entries and {{ banner.new_answers }} new answers since the last update.{% endif %}
   </div>
   {% endif %}
 

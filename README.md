@@ -1,8 +1,9 @@
 # Know Thy Self
 
 A personal self-reflection journal: one entry per day from a fixed template, todos that carry
-forward until finished, full-text search, and a nightly Markdown export. Later phases add LLM
-review panels, summaries, a profile, and a questions page using a local OpenAI-compatible model.
+forward until finished, full-text search, and a nightly Markdown export. A local OpenAI-compatible
+model adds review panels, weekly/monthly summaries, a versioned profile, and a Questions page that
+asks you direct questions to build your profile and personal history.
 
 See [docs/SPEC.md](docs/SPEC.md) for the full design.
 

@@ -77,5 +77,20 @@
   </details>
   {% endfor %}
 
+  {% if qcard %}
+  <section class="card q-day" id="q-day">
+    <div class="q-meta muted small">
+      <span>Question of the day</span>
+      <span class="badge">{{ qcard.category }}</span>
+      <a href="/questions">all questions</a>
+    </div>
+    <h2 class="q-question">{{ qcard.q.text }}</h2>
+    {% with w = qcard, mode = 'inline' %}{% include "_question_widget.html" %}{% endwith %}
+    <div class="q-skip" data-qid="{{ qcard.q.id }}">
+      <button type="button" class="link-btn link-quiet" data-skip="later" title="Back in 30 days">Later</button>
+    </div>
+  </section>
+  {% endif %}
+
 </div>
 {% endblock %}

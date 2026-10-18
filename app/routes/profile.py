@@ -14,6 +14,7 @@ router = APIRouter()
 
 NEW_DAYS_SUGGEST_FIRST = 5   # entries with content before we suggest building the first profile
 NEW_DAYS_SUGGEST_UPDATE = 7  # new days since the last profile before we suggest an update
+NEW_ANSWERS_SUGGEST = 10     # or this many new answers to questions
 
 
 def _profile_banner(conn: sqlite3.Connection, today: date) -> dict:
@@ -25,7 +26,14 @@ def _profile_banner(conn: sqlite3.Connection, today: date) -> dict:
         start = date(2000, 1, 1)
     new_days = len(periods.content_entries(conn, start, yesterday)) if start <= yesterday else 0
     threshold = NEW_DAYS_SUGGEST_UPDATE if latest else NEW_DAYS_SUGGEST_FIRST
-    return {"new_days": new_days, "suggest": new_days >= threshold, "first": latest is None}
+    after = (latest["answers_through"] or 0) if latest else 0
+    new_answers = conn.execute("SELECT COUNT(*) FROM answers WHERE id > ?", (after,)).fetchone()[0]
+    return {
+        "new_days": new_days,
+        "new_answers": new_answers,
+        "suggest": new_days >= threshold or new_answers >= NEW_ANSWERS_SUGGEST,
+        "first": latest is None,
+    }
 
 
 def _render_profile(request: Request, conn: sqlite3.Connection, row: sqlite3.Row | None, latest_id: int | None):

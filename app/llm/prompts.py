@@ -7,9 +7,10 @@ SYSTEM_PROMPT = """\
 You are the analysis engine inside a private, single-user self-reflection journal. You are writing to the journal's only author, a technically sophisticated adult who has explicitly asked for blunt, evidence-based feedback. They understand you are an AI, not a therapist or clinician. Directness does not hurt them; flattery, cushioning and padding are the failure modes. Write to the author in the second person ("you").
 
 INPUT FORMAT
-The input is made of up to four parts, always in this order:
+The input is made of up to five parts, always in this order:
 - "# PROFILE": an earlier, AI-written working profile of the author. Treat it as a set of hypotheses to test against the entries, never as established fact. Correct it when the entries disagree.
 - "# EARLIER PERIODS": AI-written summaries of older weeks and months. They are compressed but reliable about events and dates; cite their dates as you would entries.
+- "# QUESTION ANSWERS": the author's written answers to direct questions asked on a separate Questions page, grouped under "### Q<number>" headings. These are self-reports: weigh them against what the entries show the author actually doing, and cite them like [Q12, 2026-10-15]. Some answers include a structured part (a 1-5 scale, a choice, a ranking, or a verdict on a profile claim) before the written text.
 - "# JOURNAL ENTRIES": the original entries, oldest first, each under a "### YYYY-MM-DD (Weekday)" heading. An entry may include mood and energy on a 1-5 scale, tags, free-text sections, the day's todo list ([x] done, [ ] open, "carried Nd" = days since the item was first added, "suggested by a panel review" = the author accepted it from an earlier review's distilled actions, so whether it gets done shows how they act on feedback), and a report on the previous day's todos. Empty sections are omitted. Each section is introduced by the exact question the author was asked. The journal's questions were revised over time, so older entries may answer different questions than newer ones; judge each answer against the question printed above it.
 - "# TASK": what to produce.
 
@@ -152,13 +153,16 @@ def profile_task(
     end: date,
     entries_included: int,
     summaries_used: int,
+    answers_included: int = 0,
+    has_entries: bool = True,
 ) -> str:
     if has_previous:
         intro = (
             f"The # PROFILE section above is version {version - 1}. Write version {version}. Revise it: keep claims "
             f"that the new material still supports, correct or remove claims it contradicts, add new ones, and "
-            f"compress older material rather than letting the document grow. The new material covers {start} to "
-            f"{end}."
+            f"compress older material rather than letting the document grow. "
+            + (f"The new journal material covers {start} to {end}." if has_entries
+               else "There are no new journal entries this time, only new answers to questions.")
         )
         changed = (
             "## What changed since the last version\n"
@@ -174,6 +178,14 @@ def profile_task(
     if summaries_used:
         material += f", and {summaries_used} earlier periods as summaries"
     material += "."
+    if answers_included:
+        material += (
+            f" {answers_included} answers to direct questions are included under # QUESTION ANSWERS. Use them, "
+            "especially for personal history, but treat them as self-report: where an answer and the entries "
+            "disagree, say so under the relevant section rather than picking one silently. Where the author "
+            "disagreed or partly disagreed with a profile claim, re-examine that claim against all the evidence and "
+            "keep, revise or drop it; say which under \"What changed since the last version\"."
+        )
 
     return f"""\
 # TASK
@@ -184,6 +196,7 @@ This profile is a working document of hypotheses about the author, supported by 
 
 Use exactly these sections, in this order, as Markdown H2 headings:
 
+## Personal history and formative experiences
 ## Stated vs. enacted values
 ## Strengths
 ## Weaknesses and blind spots
@@ -193,8 +206,109 @@ Use exactly these sections, in this order, as Markdown H2 headings:
 ## What's still unknown
 {changed}
 
-Format for every section except the last: a short bullet list. Each bullet is one claim, followed by its evidence as date citations and a confidence tag, like:
+Format for every section except the last: a short bullet list. Each bullet is one claim, followed by its evidence as citations (entry dates, or answers like [Q12, 2026-10-15]) and a confidence tag, like:
 - You say you value finishing things, yet the gutter task sat open for 12 days [2026-10-01, 2026-10-13]. (Moderate)
+Under "Personal history and formative experiences", record the key events, people and turning points the author has described, and how each one plausibly shows up in their behavior now (label such links as hypotheses). If nothing is known yet, write one bullet saying so.
 Confidence tags are Solid (many entries, consistent), Moderate (several entries), or Thin (fewer than three data points). Under "Relationships, social patterns, and how you see others", cover who is in the author's orbit, how they prepare for and follow up conversations, and where they hold back. Under "Work, goals, and task execution mechanics", cover their stated long-term goals, how large a task they actually finish, how they break tasks down, and what they carry or avoid. Under "What's still unknown", list the gaps: questions the entries cannot yet answer, which would be worth asking the author.
 
-Keep the whole profile under about 1,000 words. Begin directly with the first heading."""
+Keep the whole profile under about 1,200 words. Begin directly with the first heading."""
+
+
+# ---------- Questions page ----------
+
+def questions_task(
+    *,
+    today: date,
+    n: int,
+    focus: str,
+    has_profile: bool,
+    counts: list[tuple[str, str, int]],
+    pinned: tuple[str, str] | None,
+    muted: list[str],
+    asked: list[str],
+    bad: list[tuple[str, str]],
+    reaskable: list[tuple[int, str, str]],
+) -> str:
+    cat_lines = "\n".join(f"- {key} ({label}): {count}" for key, label, count in counts)
+    lines = [
+        "# TASK",
+        "",
+        f"Today is {today:%A}, {today}. Choose the next questions to ask the author directly, on the journal's "
+        "Questions page. Each one is a single question the author will answer once in writing, as in an interview. "
+        "They are not daily journal prompts.",
+        "",
+        "What the author wants from these questions, in their own words:",
+        f'"""{focus or "Understand myself better."}"""',
+        "",
+        "Your job is to help them see themselves accurately: a psychological profile and a personal history, built "
+        "the way a skilled interviewer gets to know someone deeply. Accuracy matters more than comfort. Surface "
+        "strengths they underrate as readily as weaknesses they avoid.",
+        "",
+        f"Write {n} questions. Across the batch, aim for roughly this mix:",
+        "- Gaps: what the profile lists under \"What's still unknown\", or important parts of a life that nothing "
+        "above covers yet (personal history especially).",
+        "- Tests: say/do gaps, contradictions and recurring patterns in the entries and earlier answers. Quote or "
+        "cite the source, for example: \"On [2026-10-12] you wrote '...'. What was really going on?\"",
+        "- Exploration: areas of life the journal never touches.",
+    ]
+    if has_profile:
+        lines.append(
+            "Include exactly one claim_check: copy one specific claim from the profile, word for word, into "
+            "\"claim\", and ask how accurate it is. Prefer a claim with Moderate or Thin confidence, or one the "
+            "author would plausibly dispute."
+        )
+    else:
+        lines.append("There is no profile yet, so do not use claim_check.")
+    lines += [
+        "",
+        "Categories, with how many answers each has so far. Favor the thinnest, and spread the batch over at least "
+        "three categories:",
+        cat_lines,
+    ]
+    if pinned:
+        lines.append(f"The author asked for this batch to focus on {pinned[0]} ({pinned[1]}). Make at least "
+                     f"{max(1, n - 1)} of the questions that category.")
+    if muted:
+        lines.append("Never ask about these categories: " + ", ".join(muted) + ".")
+    lines += [
+        "",
+        "Rules for each question:",
+        "- One question only; do not join two questions with \"and\". Under 40 words (a scenario may use 70).",
+        "- Specific to this author, in the second person. Not generic self-help, not leading toward a conclusion, "
+        "and not something the material above already answers.",
+        "- Do not repeat or reword any earlier question listed below.",
+        "- Pick the format that fits: \"open\" (a written answer); \"scale\" (1-5; options = [what 1 means, what 5 "
+        "means]); \"choice\" (options = 2 to 6 short choices); \"rank\" (options = 3 to 7 items to put in order); "
+        "\"claim_check\". Every format also gets a written answer, so do not add \"explain why\" to the question.",
+        "- \"why\": one sentence naming the gap, pattern or entry the question targets. The author sees it.",
+    ]
+    if asked:
+        lines += ["", "Earlier questions (do not repeat):"] + [f"- {q}" for q in asked]
+    if bad:
+        lines += ["", "Questions the author rejected as bad, with their reason. Learn from these:"]
+        lines += [f'- "{q}"' + (f" (reason: {r})" if r else "") for q, r in bad]
+    if reaskable:
+        lines += ["", "These were answered more than 60 days ago. You may re-ask at most one of them unchanged, when a "
+                      "new answer would show change, by returning only its number as \"repeat_of_id\":"]
+        lines += [f"- {qid} (last answered {day}): {text}" for qid, text, day in reaskable]
+    lines += [
+        "",
+        "Output only a JSON array, with no Markdown and no other text (this overrides the plain-Markdown rule). "
+        "Each element is either",
+        '{"question": "...", "category": "<category key>", "kind": "open|scale|choice|rank|claim_check", '
+        '"options": [...] or null, "claim": "..." or null, "why": "..."}',
+        'or, for a re-ask, {"repeat_of_id": <number>}.',
+    ]
+    return "\n".join(lines)
+
+
+def followup_task(qid: int, today: date) -> str:
+    return f"""\
+# TASK
+
+Today is {today:%A}, {today}. The author has just answered Q{qid}, shown under # QUESTION ANSWERS (any other answers there are earlier context). Write one follow-up question that goes a level deeper into what they actually wrote: test a specific claim, pin down a vague word, raise a contradiction with the entries or the profile, or ask for the reason behind the answer.
+
+One question, under 40 words, second person, not leading. It must not be answerable by re-reading their answer.
+
+Output only a JSON object, with no Markdown and no other text (this overrides the plain-Markdown rule):
+{{"question": "...", "kind": "open|scale|choice|rank", "options": [...] or null, "why": "..."}}"""

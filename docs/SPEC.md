@@ -93,6 +93,8 @@ FastAPI + Jinja2 templates + small vanilla JS (no build step), stdlib `sqlite3` 
 6. Recent question/answer pairs
 7. Task instruction (always last)
 
+(Question answers sit between the summaries and the verbatim entries; see Questions.)
+
 Budget `CONTEXT_BUDGET_TOKENS` (90k, chars/4 estimate). Over budget, the oldest verbatim
 entries fall back to their weekly summaries.
 
@@ -141,13 +143,43 @@ and ones that are too harsh. No clinical diagnoses.
   entries (first profile) or 7 new days (later updates).
 - Pages: `/profile`, `/profile/{id}`, `/summaries`.
 
-### Questions (Phase 4)
-- The LLM generates batches of 3–5 questions as JSON (`question, category, why, repeat_of_id`),
-  targeting profile gaps. Categories: values, strengths, weaknesses, relationships, work, habits,
-  fears, goals, identity, `social_prep` (flesh out a story, name who to get closer to, dissect an awkward
-  interaction) and `task_breakdown` (take a long-term goal from the profile or a todo carried 7+ days and
-  break it down on the spot). Answer, skip, or regenerate.
-- Questions can be re-asked after 60+ days; answers are kept as a history per question.
+### Questions (Phase 4, implemented)
+- **Purpose** (editable on the page, stored in `settings.questions_focus`, injected into every batch): build a
+  psychological profile and personal history the way you would get to know a new person deeply; a realistic
+  view to appreciate strengths and work on weaknesses.
+- **Tables:** `questions` (text, category, kind, options, claim, why, source seed|llm|followup, parent_id,
+  recurring_days, status waiting|answered|never|bad, available_from, bad_reason) and `answers` (one question
+  can collect many answers over time). `settings` holds the focus text and muted categories.
+- **Formats:** open; scale 1-5 with end labels; choice; rank; claim_check (Agree / Partly / Disagree with a
+  claim copied from the profile). Every format also takes a written answer.
+- **Categories:** history, identity, values, meaning, strengths, weaknesses, others_view (how others see you,
+  answered by you since no one else fills it in), relationships, social_prep, work, task_breakdown, habits,
+  fears, goals. Categories can be muted.
+- **Starter set:** 29 questions (migration 006), easier first, three recurring every 90 days ("What do you
+  want most right now?", "What are you avoiding right now?", "What are you proudest of from the last three
+  months?").
+- **Queue order:** follow-ups, then recurring questions due again, then the model's questions alternated
+  with the starter set. Later = back in 30 days; Never; Bad question with an optional reason (the last 20
+  reasons are shown to the generator as examples to avoid). Skipped questions can be restored.
+- **Generation** (job `questions`, 5 per batch, temperature 0.8, thinking on): reads the profile, the last
+  30 days of entries and up to 150 recent answers, plus answer counts per category (thinnest first), an
+  optional pinned category, muted categories, the last 120 question texts (no repeats), and questions
+  answered 60+ days ago that it may re-ask unchanged (`repeat_of_id`). Mix: gaps in the profile, tests of
+  say/do gaps and patterns (citing entries), exploration. Exactly one claim_check per batch once a profile
+  exists. Output is JSON, parsed leniently, with one retry asking for valid JSON. Items are validated
+  (length, category, format, options, duplicates); bad formats fall back to open.
+- **Automatic refill:** once a profile exists, opening the journal or Questions page starts a batch in the
+  background when fewer than 3 of the model's questions are waiting and the LLM is online.
+- **Dig deeper** (job `followup`): one sharper question about what you just wrote, linked by `parent_id`.
+- **Re-asked questions** hide earlier answers until the new answer is saved, then show them all.
+- **Question of the day:** the head of the queue as a card at the bottom of today's journal page.
+- **How answers are used:** a `# QUESTION ANSWERS` layer (between earlier periods and journal entries),
+  labelled self-report and cited as `[Q12, 2026-10-15]` (linked in the UI). The profile reads every answer
+  newer than `profile_versions.answers_through` and can be updated from new answers alone; claim-check
+  disagreements must be re-examined. Reviews read the last 30 days of answers plus any the profile cites.
+  The profile banner also suggests an update after 10 new answers.
+- **Profile** gained a first section: Personal history and formative experiences (~1,200 words total).
+- **Later:** standard questionnaires (IPIP Big Five first, retaken every 6 months) as scored anchors.
 
 ## Trends (Phase 5)
 

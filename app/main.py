@@ -14,7 +14,7 @@ from .days import now_local
 from .db import connect, init_db
 from .export import export_all
 from .guard import RequestGuard
-from .routes import history, jobs_api, journal, profile, review
+from .routes import history, jobs_api, journal, profile, questions, review
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("know-thy-self")
@@ -64,3 +64,4 @@ app.include_router(history.router)
 app.include_router(jobs_api.router)
 app.include_router(review.router)
 app.include_router(profile.router)
+app.include_router(questions.router)

@@ -27,6 +27,7 @@ templates.env.filters["highlight"] = highlight
 _md = MarkdownIt("js-default", {"breaks": True})  # single newlines stay line breaks (**Read:** / **Challenge:** ...)
 _DATE = r"\d{4}-\d{2}-\d{2}"
 _CITATION = re.compile(rf"\[({_DATE}(?:\s*,\s*{_DATE})*)\]")
+_Q_CITATION = re.compile(r"\[Q(\d+)((?:\s*,\s*[^\]\[]*)?)\]")
 
 
 def _link_citations(text: str) -> str:
@@ -34,7 +35,9 @@ def _link_citations(text: str) -> str:
         dates = [d.strip() for d in m.group(1).split(",")]
         return "[" + ", ".join(f"[{d}](/day/{d})" for d in dates) + "]"
 
-    return _CITATION.sub(repl, text)
+    text = _CITATION.sub(repl, text)
+    # Answers to questions: [Q12, 2026-10-15] -> link the Q12 part to the question.
+    return _Q_CITATION.sub(lambda m: f"[[Q{m.group(1)}](/questions/{m.group(1)}){m.group(2)}]", text)
 
 
 def review_md(text: str) -> Markup:

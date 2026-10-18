@@ -1,0 +1,42 @@
+{# Answer controls for one question. Needs `w` = view_model(...) and `mode` = "redirect" | "inline" | "edit". #}
+{% set q = w.q %}
+<div class="q-widget" data-qid="{{ q.id }}" data-kind="{{ q.kind }}" data-mode="{{ mode }}"
+     {% if w.answer %}data-answer-id="{{ w.answer.id }}"{% endif %}>
+  {% if q.kind == 'claim_check' and q.claim %}
+  <blockquote class="q-claim">{{ q.claim }}</blockquote>
+  {% endif %}
+
+  {% if q.kind == 'scale' %}
+  <div class="q-scale" data-value="{{ w.value or '' }}">
+    <span class="q-scale-label">{{ w.opts[0] if w.opts else '' }}</span>
+    {% for n in range(1, 6) %}<button type="button" data-v="{{ n }}" class="{{ 'on' if w.value == n }}">{{ n }}</button>{% endfor %}
+    <span class="q-scale-label">{{ w.opts[1] if w.opts | length > 1 else '' }}</span>
+  </div>
+  {% elif q.kind == 'choice' %}
+  <div class="q-choices">
+    {% for o in w.opts %}<button type="button" class="q-pill {{ 'on' if w.value == o }}" data-v="{{ o }}">{{ o }}</button>{% endfor %}
+  </div>
+  {% elif q.kind == 'claim_check' %}
+  <div class="q-choices">
+    {% for key, label in [('agree', 'Agree'), ('partly', 'Partly'), ('disagree', 'Disagree')] %}
+    <button type="button" class="q-pill {{ 'on' if w.value == key }}" data-v="{{ key }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+  {% elif q.kind == 'rank' %}
+  <p class="muted small">Top = most. Use the arrows to reorder.</p>
+  <ol class="q-rank">
+    {% for o in (w.value if w.value else w.opts) %}
+    <li data-v="{{ o }}"><span class="q-rank-text">{{ o }}</span>
+      <button type="button" class="link-btn link-quiet" data-move="-1" title="Move up">&uarr;</button>
+      <button type="button" class="link-btn link-quiet" data-move="1" title="Move down">&darr;</button></li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+
+  <textarea class="q-text" rows="4" placeholder="{{ 'Your answer' if q.kind == 'open' else 'Why? (optional, but this is where the insight is)' }}">{{ w.answer.text if w.answer else '' }}</textarea>
+  <div class="q-actions">
+    <button type="button" class="btn btn-primary q-save">{{ 'Save changes' if mode == 'edit' else 'Save answer' }}</button>
+    {% if mode == 'edit' %}<button type="button" class="btn q-cancel">Cancel</button>{% endif %}
+    <span class="q-status muted small" aria-live="polite"></span>
+  </div>
+</div>
